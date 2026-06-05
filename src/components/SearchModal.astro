@@ -1,0 +1,78 @@
+---
+const base = import.meta.env.BASE_URL;
+---
+
+<div id="search-modal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Поиск">
+  <!-- Backdrop -->
+  <div id="search-backdrop" class="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"></div>
+
+  <!-- Panel -->
+  <div class="relative flex flex-col items-center justify-start pt-[10vh] px-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-stone-900 shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-stone-100 dark:border-stone-800 flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Поиск по курсу..."
+          class="flex-1 bg-transparent outline-none text-stone-900 dark:text-stone-100 placeholder-stone-400 text-base"
+        />
+        <button id="search-close" class="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 text-sm px-2">
+          Esc
+        </button>
+      </div>
+      <div id="search-results" class="max-h-[60vh] overflow-y-auto p-2">
+        <div id="pagefind-ui-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('search-modal');
+  const backdrop = document.getElementById('search-backdrop');
+  const closeBtn = document.getElementById('search-close');
+  const input = document.getElementById('search-input') as HTMLInputElement;
+
+  function openSearch() {
+    modal?.classList.remove('hidden');
+    setTimeout(() => input?.focus(), 50);
+  }
+
+  function closeSearch() {
+    modal?.classList.add('hidden');
+    if (input) input.value = '';
+    const container = document.getElementById('pagefind-ui-container');
+    if (container) container.innerHTML = '';
+  }
+
+  document.addEventListener('open-search', openSearch);
+  document.addEventListener('close-search', closeSearch);
+  backdrop?.addEventListener('click', closeSearch);
+  closeBtn?.addEventListener('click', closeSearch);
+
+  // Pagefind integration
+  let pagefindLoaded = false;
+  async function loadPagefind() {
+    if (pagefindLoaded) return;
+    try {
+      // @ts-ignore - pagefind is generated post-build, dynamic import at runtime
+      const pagefindPath = '/Testing-LO/pagefind/pagefind-ui.js';
+      // eslint-disable-next-line no-new-func
+      const { PagefindUI } = await (new Function('p', 'return import(p)'))(pagefindPath);
+      new PagefindUI({
+        element: '#pagefind-ui-container',
+        showImages: false,
+        resetStyles: false,
+      });
+      pagefindLoaded = true;
+    } catch {
+      const container = document.getElementById('pagefind-ui-container');
+      if (container) container.innerHTML = '<p class="p-4 text-sm text-stone-500">Поиск недоступен в режиме разработки. Запустите `npm run build` для индексации.</p>';
+    }
+  }
+
+  document.addEventListener('open-search', loadPagefind);
+</script>

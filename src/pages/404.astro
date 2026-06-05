@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="Страница не найдена">
+  <div class="max-w-2xl mx-auto px-4 py-24 text-center">
+    <div class="text-6xl mb-6">🍾</div>
+    <h1 class="text-4xl font-bold text-stone-800 dark:text-stone-200 mb-4">404 — Страница не найдена</h1>
+    <p class="text-stone-500 dark:text-stone-400 mb-8">Эта страница, как и неудавшееся брожение — что-то пошло не так.</p>
+    <a href={base} class="btn-primary">На главную</a>
+  </div>
+</BaseLayout>

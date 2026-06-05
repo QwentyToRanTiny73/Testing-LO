@@ -1,0 +1,115 @@
+---
+const base = import.meta.env.BASE_URL;
+const currentPath = Astro.url.pathname;
+
+const navLinks = [
+  { href: `${base}`, label: 'Главная', exact: true },
+  { href: `${base}course`, label: 'Курс' },
+  { href: `${base}tools`, label: 'Инструменты' },
+  { href: `${base}harvest`, label: 'Планировщик' },
+  { href: `${base}glossary`, label: 'Глоссарий' },
+  { href: `${base}about`, label: 'О курсе' },
+];
+
+function isActive(href: string, exact = false) {
+  if (exact) return currentPath === href || currentPath === href.replace(/\/$/, '');
+  return currentPath.startsWith(href) && href !== base;
+}
+---
+
+<header class="sticky top-0 z-50 bg-white/90 dark:bg-stone-950/90 backdrop-blur border-b border-stone-200 dark:border-stone-800">
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo -->
+      <a href={base} class="flex items-center gap-2 font-bold text-wine-800 dark:text-wine-400 text-lg">
+        <span class="text-2xl">🍷</span>
+        <span class="hidden sm:block">Виноделие</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden md:flex items-center gap-1">
+        {navLinks.map(link => (
+          <a
+            href={link.href}
+            class={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
+              ${isActive(link.href, link.exact)
+                ? 'bg-wine-50 text-wine-800 dark:bg-wine-950/50 dark:text-wine-300'
+                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800'}`}
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
+
+      <!-- Right controls -->
+      <div class="flex items-center gap-2">
+        <!-- Search button -->
+        <button
+          id="search-btn"
+          class="btn-ghost text-stone-500 dark:text-stone-400"
+          aria-label="Поиск (/)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <kbd class="hidden lg:inline-flex items-center gap-1 text-xs border border-stone-200 dark:border-stone-700 rounded px-1.5 py-0.5 font-mono">/</kbd>
+        </button>
+
+        <!-- Theme toggle -->
+        <button id="theme-toggle" class="btn-ghost" aria-label="Переключить тему">
+          <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364-.707-.707M6.343 6.343l-.707-.707m12.728 0-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-btn" class="md:hidden btn-ghost" aria-label="Меню">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile nav -->
+    <div id="mobile-menu" class="md:hidden hidden pb-4 border-t border-stone-200 dark:border-stone-800 pt-3">
+      <nav class="flex flex-col gap-1">
+        {navLinks.map(link => (
+          <a
+            href={link.href}
+            class={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
+              ${isActive(link.href, link.exact)
+                ? 'bg-wine-50 text-wine-800 dark:bg-wine-950/50 dark:text-wine-300'
+                : 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'}`}
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Theme toggle
+  const themeBtn = document.getElementById('theme-toggle');
+  themeBtn?.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  });
+
+  // Mobile menu
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  mobileMenuBtn?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+  });
+
+  // Search button
+  const searchBtn = document.getElementById('search-btn');
+  searchBtn?.addEventListener('click', () => {
+    document.dispatchEvent(new CustomEvent('open-search'));
+  });
+</script>

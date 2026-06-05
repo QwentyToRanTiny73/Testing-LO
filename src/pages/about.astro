@@ -1,0 +1,104 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="О курсе" description="О проекте — структура, как добавить урок, источники">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
+      <a href={base} class="hover:text-wine-700">Главная</a>
+      <span>/</span>
+      <span class="text-stone-700 dark:text-stone-300">О курсе</span>
+    </nav>
+
+    <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-6">О курсе</h1>
+
+    <div class="prose-wine">
+      <h2>Для кого этот курс</h2>
+      <p>
+        Курс разработан для практикующих виноделов и специалистов лабораторий виноделия,
+        знакомых с базовой химией и биохимией. Методическая основа — школа ВНИИВиВ «Магарач» (Крым),
+        работы Риберо-Гайона, Пейно, международные стандарты ОИВ и действующие ГОСТ Р.
+      </p>
+
+      <h2>Принцип «ориентир, не норматив»</h2>
+      <p>
+        Все конкретные технологические параметры в курсе (дозы препаратов, температуры, продолжительность
+        операций, аналитические цели) представлены как <strong>редактируемые ориентиры</strong>, требующие
+        калибровки под конкретный производственный регламент, сырьё года, оборудование и стиль вина.
+        Где значение является предметом дискуссии в отрасли или зависит от регламента — это явно обозначено
+        в тексте.
+      </p>
+
+      <div class="callout callout-warning">
+        <strong>Важно:</strong> Не используйте параметры из курса как абсолютные нормативы.
+        Они являются стартовой точкой для собственной калибровки.
+      </div>
+
+      <h2>Как добавить урок</h2>
+      <p>Добавление урока не требует правки кода:</p>
+      <ol>
+        <li>
+          Создайте файл <code>src/content/lessons/&lt;module-id&gt;/&lt;N&gt;-&lt;slug&gt;.md</code>,
+          где <code>N</code> — порядковый номер урока внутри модуля.
+        </li>
+        <li>
+          Добавьте обязательный frontmatter:
+          <pre><code>---
+title: "Название урока"
+module: "id-modulya"     # один из 15 id из modules.ts
+order: 3                  # порядок внутри модуля
+summary: "Краткое описание"
+tags: ["тег1", "тег2"]
+difficulty: базовый       # базовый | средний | продвинутый
+durationMin: 30
+status: готово            # готово | черновик
+updated: 2024-10-01
+---</code></pre>
+        </li>
+        <li>Напишите контент в Markdown. Поддерживаются таблицы, код, заголовки (TOC генерируется автоматически).</li>
+        <li>
+          Для callout-блоков используйте синтаксис:
+          <pre><code>:::important
+Важный момент...
+:::
+
+:::reference
+Ориентир: значения требуют калибровки.
+:::</code></pre>
+        </li>
+        <li>Запустите <code>npm run build</code> или <code>npm run dev</code> — урок появится автоматически.</li>
+      </ol>
+
+      <h2>Список модулей</h2>
+      <p>
+        Доступные <code>module</code> id: <code>priem-drobl-press</code>, <code>fermenty</code>,
+        <code>deburb-osvetlenie</code>, <code>drozhzhi</code>, <code>temperatura-kinetika</code>,
+        <code>ymf</code>, <code>so2</code>, <code>okleyka</code>, <code>stabilizatsiya</code>,
+        <code>filtratsiya</code>, <code>vyderzhka</code>, <code>rozliv</code>, <code>analitika</code>,
+        <code>sorta</code>, <code>defekty</code>.
+      </p>
+      <p>Метаданные модулей (название, описание, иконка) редактируются в <code>src/data/modules.ts</code>.</p>
+
+      <h2>Технологический стек</h2>
+      <ul>
+        <li><strong>Astro</strong> — статическая генерация, Content Collections для уроков и глоссария</li>
+        <li><strong>Tailwind CSS</strong> — стили, тёмная тема</li>
+        <li><strong>React</strong> — интерактивные калькуляторы (острова)</li>
+        <li><strong>Pagefind</strong> — полнотекстовый поиск по статическому билду</li>
+        <li><strong>localStorage</strong> — прогресс обучения и прогресс планировщика</li>
+        <li>Развёртывание — GitHub Pages через GitHub Actions</li>
+      </ul>
+
+      <h2>Источники и литература</h2>
+      <ul>
+        <li>Риберо-Гайон П. и др. «Теория и практика виноделия» (4 тома)</li>
+        <li>Peynaud E., Blouin J. «Connaissance et Travail du Vin»</li>
+        <li>Шольц-Куликов Е.П. «Технология вина» (ВНИИВиВ «Магарач»)</li>
+        <li>Действующие ГОСТ Р на методы анализа вина (конкретные номера — уточняйте по актуальному состоянию базы нормативов)</li>
+        <li>Международные стандарты ОИВ (OIV Compendium of International Methods of Analysis)</li>
+        <li>Материалы ВНИИВиВ «Магарач», Крым</li>
+      </ul>
+    </div>
+  </div>
+</BaseLayout>

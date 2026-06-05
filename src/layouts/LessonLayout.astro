@@ -1,0 +1,118 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import ModuleSidebar from '../components/course/ModuleSidebar.astro';
+import LessonTOC from '../components/course/LessonTOC.astro';
+import Breadcrumbs from '../components/course/Breadcrumbs.astro';
+import LessonProgress from '../components/course/LessonProgress.astro';
+import type { CollectionEntry } from 'astro:content';
+import { getModuleById } from '../data/modules';
+
+interface Props {
+  lesson: CollectionEntry<'lessons'>;
+  headings: { depth: number; slug: string; text: string }[];
+  prevLesson?: { title: string; slug: string };
+  nextLesson?: { title: string; slug: string };
+}
+
+const { lesson, headings, prevLesson, nextLesson } = Astro.props;
+const module = getModuleById(lesson.data.module);
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title={lesson.data.title} description={lesson.data.summary}>
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex gap-8 py-8">
+      <!-- Sidebar -->
+      <aside class="hidden lg:block w-64 flex-shrink-0">
+        <div class="sticky top-24">
+          <ModuleSidebar currentModule={lesson.data.module} currentLesson={lesson.id} />
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <article class="flex-1 min-w-0">
+        <Breadcrumbs module={module} lessonTitle={lesson.data.title} />
+
+        <header class="mb-8">
+          <div class="flex flex-wrap gap-2 mb-3">
+            <span class={`text-xs px-2 py-0.5 rounded-full font-medium
+              ${lesson.data.difficulty === 'базовый' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
+                lesson.data.difficulty === 'средний' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' :
+                'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'}`}>
+              {lesson.data.difficulty}
+            </span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+              ≈{lesson.data.durationMin} мин
+            </span>
+            {lesson.data.status === 'черновик' && (
+              <span class="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">
+                черновик
+              </span>
+            )}
+          </div>
+
+          <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-3">{lesson.data.title}</h1>
+          <p class="text-lg text-stone-600 dark:text-stone-400">{lesson.data.summary}</p>
+
+          {lesson.data.tags.length > 0 && (
+            <div class="flex flex-wrap gap-2 mt-4">
+              {lesson.data.tags.map(tag => (
+                <span class="text-xs px-2 py-1 rounded-md bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </header>
+
+        <div class="prose-wine" data-pagefind-body>
+          <slot />
+        </div>
+
+        {lesson.data.sources && lesson.data.sources.length > 0 && (
+          <section class="mt-10 pt-6 border-t border-stone-200 dark:border-stone-800">
+            <h3 class="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wide mb-3">Источники</h3>
+            <ul class="space-y-1">
+              {lesson.data.sources.map(src => (
+                <li class="text-sm text-stone-600 dark:text-stone-400 flex gap-2">
+                  <span class="text-stone-400">—</span>
+                  <span>{src}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <LessonProgress lessonId={lesson.id} />
+
+        <!-- Navigation -->
+        <nav class="mt-8 flex gap-4 justify-between">
+          {prevLesson ? (
+            <a href={`${base}course/${prevLesson.slug}`} class="btn-secondary flex-1 max-w-xs">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+              <span class="truncate">{prevLesson.title}</span>
+            </a>
+          ) : <div class="flex-1 max-w-xs" />}
+
+          {nextLesson ? (
+            <a href={`${base}course/${nextLesson.slug}`} class="btn-primary flex-1 max-w-xs justify-end">
+              <span class="truncate">{nextLesson.title}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          ) : <div class="flex-1 max-w-xs" />}
+        </nav>
+      </article>
+
+      <!-- TOC -->
+      <aside class="hidden xl:block w-56 flex-shrink-0">
+        <div class="sticky top-24">
+          <LessonTOC headings={headings} />
+        </div>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,134 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const terms = await getCollection('glossary');
+const sorted = terms.sort((a, b) => a.data.term.localeCompare(b.data.term, 'ru'));
+
+const allTags = [...new Set(sorted.flatMap(t => t.data.tags || []))].sort((a, b) => a.localeCompare(b, 'ru'));
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="Глоссарий" description="Словарь терминов по технологии виноделия">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
+      <a href={base} class="hover:text-wine-700">Главная</a>
+      <span>/</span>
+      <span class="text-stone-700 dark:text-stone-300">Глоссарий</span>
+    </nav>
+
+    <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">Глоссарий</h1>
+    <p class="text-stone-500 dark:text-stone-400 mb-6">{sorted.length} терминов по технологии виноделия</p>
+
+    <!-- Search -->
+    <div class="relative mb-6">
+      <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input
+        id="glossary-search"
+        type="text"
+        placeholder="Поиск термина..."
+        class="input pl-9"
+        aria-label="Поиск по глоссарию"
+      />
+    </div>
+
+    <!-- Tag filter -->
+    <div class="flex flex-wrap gap-2 mb-8" id="tag-filters">
+      <button
+        class="tag-btn active text-xs px-2.5 py-1 rounded-full border transition-colors border-wine-500 bg-wine-50 text-wine-700 dark:bg-wine-950/30 dark:text-wine-400 dark:border-wine-600"
+        data-tag="all"
+      >
+        Все
+      </button>
+      {allTags.map(tag => (
+        <button
+          class="tag-btn text-xs px-2.5 py-1 rounded-full border transition-colors border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400"
+          data-tag={tag}
+        >
+          {tag}
+        </button>
+      ))}
+    </div>
+
+    <!-- Terms list -->
+    <div id="glossary-list" class="space-y-4">
+      {sorted.map(async term => {
+        const { Content } = await term.render();
+        return (
+          <div
+            class="glossary-item card"
+            data-term={term.data.term.toLowerCase()}
+            data-tags={JSON.stringify(term.data.tags || [])}
+          >
+            <h2 class="text-lg font-bold text-stone-800 dark:text-stone-200 mb-1">{term.data.term}</h2>
+            <p class="text-sm text-stone-600 dark:text-stone-400 mb-3">{term.data.definition}</p>
+            <div class="prose-wine text-sm">
+              <Content />
+            </div>
+            {term.data.related && term.data.related.length > 0 && (
+              <div class="mt-3 flex flex-wrap gap-1 items-center">
+                <span class="text-xs text-stone-400">Связано:</span>
+                {term.data.related.map((r: string) => (
+                  <span class="text-xs px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">{r}</span>
+                ))}
+              </div>
+            )}
+            {term.data.tags && term.data.tags.length > 0 && (
+              <div class="mt-2 flex flex-wrap gap-1">
+                {term.data.tags.map((tag: string) => (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-wine-50 text-wine-700 dark:bg-wine-950/30 dark:text-wine-400">#{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+
+    <div id="no-results" class="hidden text-center py-12 text-stone-400">
+      <div class="text-4xl mb-3">🔍</div>
+      <p>Термин не найден. Попробуйте другой запрос.</p>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const searchInput = document.getElementById('glossary-search') as HTMLInputElement;
+  const items = document.querySelectorAll<HTMLElement>('.glossary-item');
+  const noResults = document.getElementById('no-results')!;
+  const tagBtns = document.querySelectorAll<HTMLElement>('.tag-btn');
+  let activeTag = 'all';
+
+  function filterItems() {
+    const query = searchInput.value.toLowerCase().trim();
+    let visible = 0;
+    items.forEach(item => {
+      const term = item.dataset.term || '';
+      const tags: string[] = JSON.parse(item.dataset.tags || '[]');
+      const matchSearch = !query || term.includes(query) ||
+        item.textContent?.toLowerCase().includes(query);
+      const matchTag = activeTag === 'all' || tags.includes(activeTag);
+      const show = matchSearch && matchTag;
+      item.classList.toggle('hidden', !show);
+      if (show) visible++;
+    });
+    noResults.classList.toggle('hidden', visible > 0);
+  }
+
+  searchInput?.addEventListener('input', filterItems);
+
+  tagBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTag = btn.dataset.tag || 'all';
+      tagBtns.forEach(b => {
+        b.classList.remove('active', 'border-wine-500', 'bg-wine-50', 'text-wine-700', 'dark:bg-wine-950/30', 'dark:text-wine-400', 'dark:border-wine-600');
+        b.classList.add('border-stone-200', 'dark:border-stone-700', 'text-stone-600', 'dark:text-stone-400');
+      });
+      btn.classList.add('active', 'border-wine-500', 'bg-wine-50', 'text-wine-700', 'dark:bg-wine-950/30', 'dark:text-wine-400', 'dark:border-wine-600');
+      btn.classList.remove('border-stone-200', 'dark:border-stone-700', 'text-stone-600', 'dark:text-stone-400');
+      filterItems();
+    });
+  });
+</script>

@@ -1,0 +1,43 @@
+---
+import { getCollection } from 'astro:content';
+
+interface Props {
+  moduleId: string;
+  showLabel?: boolean;
+}
+const { moduleId, showLabel = true } = Astro.props;
+const lessons = await getCollection('lessons', e => e.data.module === moduleId);
+const lessonIds = lessons.map(l => l.id);
+---
+
+<div class="module-progress" data-lesson-ids={JSON.stringify(lessonIds)}>
+  <div class="flex items-center gap-2">
+    {showLabel && <span class="text-xs text-stone-500 dark:text-stone-400 module-progress-text">0 / {lessons.length}</span>}
+    <div class="flex-1 h-1.5 bg-stone-200 dark:bg-stone-700 rounded-full overflow-hidden">
+      <div class="module-progress-bar h-full bg-wine-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateProgress(el: HTMLElement) {
+    const ids: string[] = JSON.parse(el.dataset.lessonIds || '[]');
+    const stored = JSON.parse(localStorage.getItem('lesson-progress') || '{}');
+    const completed = ids.filter(id => stored[id]).length;
+    const pct = ids.length > 0 ? Math.round((completed / ids.length) * 100) : 0;
+
+    const bar = el.querySelector<HTMLElement>('.module-progress-bar');
+    const text = el.querySelector<HTMLElement>('.module-progress-text');
+    if (bar) bar.style.width = `${pct}%`;
+    if (text) text.textContent = `${completed} / ${ids.length}`;
+  }
+
+  document.querySelectorAll<HTMLElement>('.module-progress').forEach(updateProgress);
+
+  window.addEventListener('storage', () => {
+    document.querySelectorAll<HTMLElement>('.module-progress').forEach(updateProgress);
+  });
+  document.addEventListener('lesson-completed', () => {
+    document.querySelectorAll<HTMLElement>('.module-progress').forEach(updateProgress);
+  });
+</script>

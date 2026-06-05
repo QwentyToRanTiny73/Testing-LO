@@ -1,0 +1,50 @@
+---
+import LessonLayout from '../../../layouts/LessonLayout.astro';
+import { getCollection } from 'astro:content';
+import { modules } from '../../../data/modules';
+
+export async function getStaticPaths() {
+  const allLessons = await getCollection('lessons');
+
+  // Sort all lessons by module order then lesson order
+  const sortedLessons = [...allLessons].sort((a, b) => {
+    const modA = modules.find(m => m.id === a.data.module)?.order ?? 99;
+    const modB = modules.find(m => m.id === b.data.module)?.order ?? 99;
+    if (modA !== modB) return modA - modB;
+    return a.data.order - b.data.order;
+  });
+
+  return allLessons.map(lesson => {
+    const idx = sortedLessons.findIndex(l => l.id === lesson.id);
+    const prevLesson = idx > 0 ? sortedLessons[idx - 1] : undefined;
+    const nextLesson = idx < sortedLessons.length - 1 ? sortedLessons[idx + 1] : undefined;
+
+    const slugParts = lesson.slug.split('/');
+    const lessonSlug = slugParts[slugParts.length - 1];
+
+    function getLessonHref(l: typeof lesson) {
+      const parts = l.slug.split('/');
+      return `${l.data.module}/${parts[parts.length - 1]}`;
+    }
+
+    return {
+      params: {
+        module: lesson.data.module,
+        lesson: lessonSlug,
+      },
+      props: {
+        lesson,
+        prevLesson: prevLesson ? { title: prevLesson.data.title, slug: getLessonHref(prevLesson) } : undefined,
+        nextLesson: nextLesson ? { title: nextLesson.data.title, slug: getLessonHref(nextLesson) } : undefined,
+      },
+    };
+  });
+}
+
+const { lesson, prevLesson, nextLesson } = Astro.props;
+const { Content, headings } = await lesson.render();
+---
+
+<LessonLayout lesson={lesson} headings={headings} prevLesson={prevLesson} nextLesson={nextLesson}>
+  <Content />
+</LessonLayout>
