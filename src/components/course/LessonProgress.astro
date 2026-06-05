@@ -1,0 +1,62 @@
+---
+interface Props {
+  lessonId: string;
+}
+const { lessonId } = Astro.props;
+---
+
+<div class="mt-10 pt-6 border-t border-stone-200 dark:border-stone-800">
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-stone-600 dark:text-stone-400">Вы изучили этот урок?</p>
+    <button
+      id="complete-btn"
+      data-lesson-id={lessonId}
+      class="btn-primary"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 check-icon hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span class="complete-text">Отметить пройденным</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('complete-btn') as HTMLButtonElement;
+  if (btn) {
+    const lessonId = btn.dataset.lessonId!;
+    const stored = JSON.parse(localStorage.getItem('lesson-progress') || '{}');
+
+    function updateBtn(completed: boolean) {
+      const text = btn.querySelector('.complete-text')!;
+      const icon = btn.querySelector('.check-icon')!;
+      if (completed) {
+        text.textContent = 'Пройдено ✓';
+        icon.classList.remove('hidden');
+        btn.classList.add('bg-green-700', 'hover:bg-green-800');
+        btn.classList.remove('bg-wine-700', 'hover:bg-wine-800');
+      } else {
+        text.textContent = 'Отметить пройденным';
+        icon.classList.add('hidden');
+        btn.classList.remove('bg-green-700', 'hover:bg-green-800');
+        btn.classList.add('bg-wine-700', 'hover:bg-wine-800');
+      }
+    }
+
+    updateBtn(!!stored[lessonId]);
+
+    btn.addEventListener('click', () => {
+      const progress = JSON.parse(localStorage.getItem('lesson-progress') || '{}');
+      const isCompleted = !!progress[lessonId];
+      if (isCompleted) {
+        delete progress[lessonId];
+      } else {
+        progress[lessonId] = true;
+      }
+      localStorage.setItem('lesson-progress', JSON.stringify(progress));
+      updateBtn(!isCompleted);
+      document.dispatchEvent(new CustomEvent('lesson-completed'));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'lesson-progress' }));
+    });
+  }
+</script>

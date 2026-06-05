@@ -1,0 +1,30 @@
+---
+import type { Module } from '../../data/modules';
+
+interface Props {
+  module?: Module;
+  lessonTitle?: string;
+}
+const { module, lessonTitle } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<nav aria-label="Хлебные крошки" class="flex items-center gap-1.5 text-sm text-stone-500 dark:text-stone-400 mb-6">
+  <a href={base} class="hover:text-wine-700 dark:hover:text-wine-400 transition-colors">Главная</a>
+  <span>/</span>
+  <a href={`${base}course`} class="hover:text-wine-700 dark:hover:text-wine-400 transition-colors">Курс</a>
+  {module && (
+    <>
+      <span>/</span>
+      <a href={`${base}course/${module.id}`} class="hover:text-wine-700 dark:hover:text-wine-400 transition-colors truncate max-w-[120px]">
+        {module.title}
+      </a>
+    </>
+  )}
+  {lessonTitle && (
+    <>
+      <span>/</span>
+      <span class="text-stone-700 dark:text-stone-300 truncate max-w-[180px]">{lessonTitle}</span>
+    </>
+  )}
+</nav>

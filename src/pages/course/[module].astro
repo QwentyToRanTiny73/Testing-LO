@@ -1,0 +1,131 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ModuleSidebar from '../../components/course/ModuleSidebar.astro';
+import ModuleProgressBar from '../../components/course/ModuleProgressBar.astro';
+import { getCollection } from 'astro:content';
+import { modules, getModuleById } from '../../data/modules';
+
+export async function getStaticPaths() {
+  const allLessons = await getCollection('lessons');
+  return modules.map(mod => {
+    const lessons = allLessons
+      .filter(l => l.data.module === mod.id)
+      .sort((a, b) => a.data.order - b.data.order);
+    return {
+      params: { module: mod.id },
+      props: { mod, lessons },
+    };
+  });
+}
+
+const { mod, lessons } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const totalTime = lessons.reduce((s: number, l: any) => s + l.data.durationMin, 0);
+---
+
+<BaseLayout title={mod.title} description={mod.description}>
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex gap-8 py-8">
+      <!-- Sidebar -->
+      <aside class="hidden lg:block w-64 flex-shrink-0">
+        <div class="sticky top-24">
+          <ModuleSidebar currentModule={mod.id} />
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="flex-1 min-w-0">
+        <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
+          <a href={base} class="hover:text-wine-700">Главная</a>
+          <span>/</span>
+          <a href={`${base}course`} class="hover:text-wine-700">Курс</a>
+          <span>/</span>
+          <span class="text-stone-700 dark:text-stone-300 truncate">{mod.title}</span>
+        </nav>
+
+        <header class="mb-8">
+          <div class="flex items-center gap-4 mb-4">
+            <span class="text-4xl">{mod.icon}</span>
+            <div>
+              <div class="text-xs text-stone-400 dark:text-stone-500 mb-0.5">Модуль {mod.order} из {modules.length}</div>
+              <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100">{mod.title}</h1>
+            </div>
+          </div>
+          <p class="text-lg text-stone-600 dark:text-stone-400 mb-4">{mod.description}</p>
+          <div class="flex flex-wrap gap-4 text-sm text-stone-500 dark:text-stone-400 mb-4">
+            <span>{lessons.length} уроков</span>
+            <span>≈{totalTime} мин</span>
+          </div>
+          <ModuleProgressBar moduleId={mod.id} />
+        </header>
+
+        <!-- Lessons list -->
+        <div class="space-y-3">
+          {lessons.map((lesson: any) => {
+            const slug = lesson.slug.includes('/') ? lesson.slug.split('/').slice(1).join('/') : lesson.slug;
+            return (
+              <a
+                href={`${base}course/${mod.id}/${slug}`}
+                class="card flex items-start gap-4 hover:border-wine-300 dark:hover:border-wine-700 hover:shadow-sm transition-all group"
+              >
+                <div class="lesson-check w-8 h-8 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 border-stone-200 dark:border-stone-700 group-hover:border-wine-400 transition-colors"
+                  data-lesson-id={lesson.id}>
+                  <span class="lesson-check-num text-xs font-medium text-stone-400 dark:text-stone-500">{lesson.data.order}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-wrap items-start justify-between gap-2">
+                    <h3 class="font-semibold text-stone-800 dark:text-stone-200 group-hover:text-wine-700 dark:group-hover:text-wine-400 transition-colors">
+                      {lesson.data.title}
+                      {lesson.data.status === 'черновик' && (
+                        <span class="ml-2 text-xs font-normal px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">черновик</span>
+                      )}
+                    </h3>
+                    <div class="flex gap-2 items-center flex-shrink-0">
+                      <span class={`text-xs px-2 py-0.5 rounded-full
+                        ${lesson.data.difficulty === 'базовый' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                          lesson.data.difficulty === 'средний' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                          'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                        {lesson.data.difficulty}
+                      </span>
+                      <span class="text-xs text-stone-400">{lesson.data.durationMin} мин</span>
+                    </div>
+                  </div>
+                  <p class="text-sm text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">{lesson.data.summary}</p>
+                  {lesson.data.tags?.length > 0 && (
+                    <div class="flex flex-wrap gap-1 mt-2">
+                      {lesson.data.tags.slice(0, 4).map((tag: string) => (
+                        <span class="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </a>
+            );
+          })}
+        </div>
+
+        {lessons.length === 0 && (
+          <div class="text-center py-12 text-stone-400">
+            <div class="text-4xl mb-3">📚</div>
+            <p>Уроки для этого модуля скоро появятся.</p>
+          </div>
+        )}
+      </main>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  function updateLessonChecks() {
+    const stored = JSON.parse(localStorage.getItem('lesson-progress') || '{}');
+    document.querySelectorAll<HTMLElement>('.lesson-check[data-lesson-id]').forEach(el => {
+      const id = el.dataset.lessonId;
+      if (id && stored[id]) {
+        el.classList.add('bg-green-500', 'border-green-500');
+        el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+      }
+    });
+  }
+  updateLessonChecks();
+  window.addEventListener('storage', updateLessonChecks);
+</script>

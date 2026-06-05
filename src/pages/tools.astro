@@ -1,0 +1,124 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import MacerationCalc from '../components/calculators/MacerationCalc';
+import SO2Calc from '../components/calculators/SO2Calc';
+import BentoniteCalc from '../components/calculators/BentoniteCalc';
+import SugarCalc from '../components/calculators/SugarCalc';
+import AcidCalc from '../components/calculators/AcidCalc';
+import BrixConverter from '../components/calculators/BrixConverter';
+const base = import.meta.env.BASE_URL;
+
+const tools = [
+  { id: 'maceration', icon: '🍇', title: 'Мацерация красных', desc: 'Диапазон дней мацерации по сорту, стилю и температуре' },
+  { id: 'so2',        icon: '⚗️', title: 'Сульфитирование (SO₂)', desc: 'Расчёт молекулярного SO₂ и навески метабисульфита' },
+  { id: 'bentonite',  icon: '🏺', title: 'Пробная оклейка бентонитом', desc: 'Подбор рабочей дозы по тепловому тесту' },
+  { id: 'sugar',      icon: '🍬', title: 'Коррекция сахара', desc: 'Шаптализация и прогноз содержания спирта' },
+  { id: 'acid',       icon: '🧪', title: 'Коррекция кислотности', desc: 'Подкисление (винная кислота) / раскисление (KHCO₃)' },
+  { id: 'brix',       icon: '📏', title: 'Конвертер Brix/Oechsle', desc: 'Пересчёт сахаристости и температурная коррекция' },
+];
+---
+
+<BaseLayout title="Инструменты винодела" description="Практические калькуляторы для расчётов в производстве вина">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
+      <a href={base} class="hover:text-wine-700">Главная</a>
+      <span>/</span>
+      <span class="text-stone-700 dark:text-stone-300">Инструменты</span>
+    </nav>
+
+    <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">Калькуляторы винодела</h1>
+    <p class="text-stone-500 dark:text-stone-400 mb-8">
+      Практические расчёты для производственного процесса. Все значения — ориентиры, требующие калибровки.
+    </p>
+
+    <!-- Disclaimer -->
+    <div class="rounded-xl border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-4 mb-10 text-sm text-amber-800 dark:text-amber-200">
+      <strong>Важно:</strong> все калькуляторы используют упрощённые модели и ориентировочные коэффициенты.
+      Результаты не являются официальными нормативами. Применяйте с учётом конкретного сырья, оборудования и регламента предприятия.
+    </div>
+
+    <!-- Quick nav -->
+    <div class="flex flex-wrap gap-2 mb-10">
+      {tools.map(t => (
+        <a href={`#${t.id}`} class="text-sm px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400 hover:text-wine-700 dark:hover:text-wine-400 transition-colors">
+          {t.icon} {t.title}
+        </a>
+      ))}
+    </div>
+
+    <!-- Calculators -->
+    <div class="space-y-12">
+      <!-- Maceration -->
+      <section id="maceration" class="card">
+        <div class="flex items-start gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <span class="text-3xl">🍇</span>
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Мацерация красных вин</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Рекомендованный диапазон дней мацерации по сорту, целевому стилю и температуре</p>
+          </div>
+        </div>
+        <MacerationCalc client:load />
+      </section>
+
+      <!-- SO2 -->
+      <section id="so2" class="card">
+        <div class="flex items-start gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <span class="text-3xl">⚗️</span>
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Расчёт сульфитирования</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Молекулярный SO₂ по pH и навеска метабисульфита калия (КМС)</p>
+          </div>
+        </div>
+        <SO2Calc client:load />
+      </section>
+
+      <!-- Bentonite -->
+      <section id="bentonite" class="card">
+        <div class="flex items-start gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <span class="text-3xl">🏺</span>
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Пробная оклейка бентонитом</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Подбор минимальной стабилизирующей дозы и расчёт навески</p>
+          </div>
+        </div>
+        <BentoniteCalc client:load />
+      </section>
+
+      <!-- Sugar -->
+      <section id="sugar" class="card">
+        <div class="flex items-start gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <span class="text-3xl">🍬</span>
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Коррекция сахара</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Расчёт навески сахара и прогноз потенциального спирта</p>
+          </div>
+        </div>
+        <SugarCalc client:load />
+      </section>
+
+      <!-- Acid -->
+      <section id="acid" class="card">
+        <div class="flex items-start gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <span class="text-3xl">🧪</span>
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Коррекция кислотности</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Подкисление винной кислотой / раскисление бикарбонатом калия</p>
+          </div>
+        </div>
+        <AcidCalc client:load />
+      </section>
+
+      <!-- Brix converter -->
+      <section id="brix" class="card">
+        <div class="flex items-start gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <span class="text-3xl">📏</span>
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Конвертер Brix / Oechsle / плотность</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Пересчёт шкал сахаристости и температурная коррекция ареометра</p>
+          </div>
+        </div>
+        <BrixConverter client:load />
+      </section>
+    </div>
+  </div>
+</BaseLayout>

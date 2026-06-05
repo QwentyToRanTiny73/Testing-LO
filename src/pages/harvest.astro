@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HarvestPlanner from '../components/calculators/HarvestPlanner';
+import { harvestLots } from '../data/harvest2026';
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="Планировщик урожая 2026" description="Интерактивный планировщик партий урожая 2026 с чек-листами обработок">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
+      <a href={base} class="hover:text-wine-700">Главная</a>
+      <span>/</span>
+      <span class="text-stone-700 dark:text-stone-300">Планировщик урожая</span>
+    </nav>
+
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">🌿 Планировщик урожая 2026</h1>
+      <p class="text-stone-500 dark:text-stone-400 mb-4">
+        Интерактивный чек-лист обработки для каждого лота. Прогресс сохраняется в браузере.
+        Данные партий редактируются в <code class="text-xs bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">src/data/harvest2026.ts</code>.
+      </p>
+
+      <!-- Summary cards -->
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        {harvestLots.map(lot => (
+          <div class="card text-center">
+            <div class="text-xl mb-1">{lot.icon}</div>
+            <div class="text-xs font-medium text-stone-700 dark:text-stone-300">{lot.variety}</div>
+            <div class="text-xs text-stone-400 mt-0.5">{lot.style.split('(')[0].trim()}</div>
+            <div class="text-xs text-stone-400">{lot.estimatedVolumeL} л</div>
+          </div>
+        ))}
+      </div>
+
+      <div class="rounded-xl border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-amber-800 dark:text-amber-200">
+        <strong>Ориентир:</strong> все даты и объёмы — плановые оценки. Реальный график корректируется по погоде, фенологии и ресурсам предприятия.
+      </div>
+    </div>
+
+    <HarvestPlanner lots={harvestLots} client:load />
+  </div>
+</BaseLayout>

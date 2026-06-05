@@ -1,0 +1,46 @@
+---
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+const { headings } = Astro.props;
+const filtered = headings.filter(h => h.depth <= 3);
+---
+
+{filtered.length > 0 && (
+  <nav>
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-3">Содержание</h2>
+    <ul class="space-y-1.5">
+      {filtered.map(h => (
+        <li style={`padding-left: ${(h.depth - 2) * 12}px`}>
+          <a
+            href={`#${h.slug}`}
+            class="text-xs text-stone-500 hover:text-wine-700 dark:text-stone-400 dark:hover:text-wine-400 transition-colors line-clamp-2 toc-link"
+            data-heading={h.slug}
+          >
+            {h.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<script>
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        const id = entry.target.id;
+        const link = document.querySelector<HTMLElement>(`.toc-link[data-heading="${id}"]`);
+        if (link) {
+          if (entry.isIntersecting) {
+            document.querySelectorAll('.toc-link').forEach(l => l.classList.remove('text-wine-700', 'dark:text-wine-400', 'font-medium'));
+            link.classList.add('text-wine-700', 'font-medium');
+          }
+        }
+      });
+    },
+    { rootMargin: '-80px 0px -70% 0px' }
+  );
+
+  document.querySelectorAll('h2[id], h3[id]').forEach(h => observer.observe(h));
+</script>
