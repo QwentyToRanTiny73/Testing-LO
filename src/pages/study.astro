@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import FlashcardDeck from '../components/learning/FlashcardDeck';
+import { flashcards } from '../data/flashcards';
+import { modules } from '../data/modules';
+const base = import.meta.env.BASE_URL;
+
+const moduleParam = Astro.url.searchParams.get('module') ?? undefined;
+const activeModule = moduleParam ? modules.find(m => m.id === moduleParam) : undefined;
+
+const cardsByModule = new Map<string, number>();
+for (const c of flashcards) {
+  cardsByModule.set(c.moduleId, (cardsByModule.get(c.moduleId) || 0) + 1);
+}
+---
+
+<BaseLayout title="Флэш-карты" description="Интервальное повторение — флэш-карты по виноделию">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+    <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
+      <a href={base} class="hover:text-wine-700">Главная</a>
+      <span>/</span>
+      <span class="text-stone-700 dark:text-stone-300">Флэш-карты</span>
+    </nav>
+
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">🃏 Флэш-карты</h1>
+      <p class="text-stone-500 dark:text-stone-400">
+        Интервальное повторение по алгоритму SM-2. Оценивайте знание — система покажет карточку в нужный момент.
+      </p>
+    </div>
+
+    <!-- Module filter -->
+    <div class="flex flex-wrap gap-2 mb-6">
+      <a href={`${base}study`}
+        class={`text-xs px-3 py-1.5 rounded-full border transition-colors
+          ${!moduleParam
+            ? 'bg-wine-700 text-white border-wine-700'
+            : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400'}`}>
+        Все ({flashcards.length})
+      </a>
+      {[...cardsByModule.entries()].map(([modId, count]) => {
+        const mod = modules.find(m => m.id === modId);
+        return mod ? (
+          <a
+            href={`${base}study?module=${modId}`}
+            class={`text-xs px-3 py-1.5 rounded-full border transition-colors
+              ${moduleParam === modId
+                ? 'bg-wine-700 text-white border-wine-700'
+                : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400'}`}
+          >
+            {mod.icon} {mod.title.split(':')[0].substring(0, 20)} ({count})
+          </a>
+        ) : null;
+      })}
+    </div>
+
+    {activeModule && (
+      <div class="rounded-lg bg-wine-50 dark:bg-wine-950/30 border border-wine-200 dark:border-wine-800 p-3 mb-6 text-sm text-wine-800 dark:text-wine-300">
+        Модуль: <strong>{activeModule.icon} {activeModule.title}</strong>
+      </div>
+    )}
+
+    <!-- Algorithm explanation -->
+    <div class="rounded-xl border border-stone-200 dark:border-stone-800 p-4 mb-6 text-xs text-stone-500 dark:text-stone-400">
+      <div class="font-medium text-stone-600 dark:text-stone-300 mb-1">Как работает интервальное повторение:</div>
+      Оцените своё знание: <span class="text-red-600 font-medium">Не знаю</span> → повтор сегодня ·
+      <span class="text-orange-600 font-medium">Трудно</span> → завтра ·
+      <span class="text-blue-600 font-medium">Знаю</span> → через 6 дней ·
+      <span class="text-green-600 font-medium">Легко</span> → через ~2 недели.
+      Интервалы растут по мере запоминания.
+    </div>
+
+    <div class="card">
+      <FlashcardDeck client:load cards={flashcards} moduleFilter={moduleParam} />
+    </div>
+  </div>
+</BaseLayout>
