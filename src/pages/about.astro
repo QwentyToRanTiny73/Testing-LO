@@ -11,14 +11,31 @@ const base = import.meta.env.BASE_URL;
       <span class="text-stone-700 dark:text-stone-300">О курсе</span>
     </nav>
 
-    <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-6">О курсе</h1>
+    <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-6">О проекте</h1>
 
     <div class="prose-wine">
-      <h2>Для кого этот курс</h2>
+      <h2>Два курса</h2>
       <p>
-        Курс разработан для практикующих виноделов и специалистов лабораторий виноделия,
-        знакомых с базовой химией и биохимией. Методическая основа — школа ВНИИВиВ «Магарач» (Крым),
-        работы Риберо-Гайона, Пейно, международные стандарты ОИВ и действующие ГОСТ Р.
+        Платформа объединяет два взаимодополняющих курса по виноделию:
+      </p>
+      <ul>
+        <li>
+          <strong><a href={`${base}courses/praktikum`}>Практикум технолога</a></strong> — прикладная
+          технология производства: от приёмки винограда до розлива. Методическая основа — школа
+          ВНИИВиВ «Магарач» (Крым), культурные дрожжи, стандартный арсенал обработок, калькуляторы.
+        </li>
+        <li>
+          <strong><a href={`${base}courses/enologiya`}>Энология: научные основы</a></strong> — химия,
+          биохимия и микробиология вина: что происходит на молекулярном уровне при созревании винограда,
+          брожении, выдержке и старении. Курс объясняет «почему» за технологическими приёмами.
+        </li>
+      </ul>
+
+      <h2>Для кого</h2>
+      <p>
+        Практикум подходит начинающим технологам и виноделам малых хозяйств; энология — тем, кто хочет
+        перейти от рецептов к пониманию механизмов. Методическая основа — школа ВНИИВиВ «Магарач»,
+        работы Риберо-Гайона, Пейно, Болтона, Уотерхауза, международные стандарты ОИВ и действующие ГОСТ Р.
       </p>
 
       <h2>Принцип «ориентир, не норматив»</h2>
@@ -70,15 +87,24 @@ updated: 2024-10-01
         <li>Запустите <code>npm run build</code> или <code>npm run dev</code> — урок появится автоматически.</li>
       </ol>
 
-      <h2>Список модулей</h2>
+      <h2>Модули и курсы</h2>
       <p>
-        Доступные <code>module</code> id: <code>priem-drobl-press</code>, <code>fermenty</code>,
-        <code>deburb-osvetlenie</code>, <code>drozhzhi</code>, <code>temperatura-kinetika</code>,
-        <code>ymf</code>, <code>so2</code>, <code>okleyka</code>, <code>stabilizatsiya</code>,
-        <code>filtratsiya</code>, <code>vyderzhka</code>, <code>rozliv</code>, <code>analitika</code>,
-        <code>sorta</code>, <code>defekty</code>.
+        Каждый модуль принадлежит курсу. Метаданные модулей (название, описание, иконка, поле
+        <code>course</code>) редактируются в <code>src/data/modules.ts</code>, а описания самих курсов —
+        в <code>src/data/courses.ts</code>. Курс урока определяется автоматически по его модулю, поэтому в
+        frontmatter урока поле курса указывать не нужно.
       </p>
-      <p>Метаданные модулей (название, описание, иконка) редактируются в <code>src/data/modules.ts</code>.</p>
+      <p>
+        Практикум: <code>priem-drobl-press</code>, <code>fermenty</code>, <code>deburb-osvetlenie</code>,
+        <code>drozhzhi</code>, <code>temperatura-kinetika</code>, <code>ymf</code>, <code>so2</code>,
+        <code>okleyka</code>, <code>stabilizatsiya</code>, <code>filtratsiya</code>, <code>vyderzhka</code>,
+        <code>rozliv</code>, <code>analitika</code>, <code>sorta</code>, <code>defekty</code>.
+      </p>
+      <p>
+        Энология: <code>eno-vinograd-suslo</code>, <code>eno-brozhenie-biohimiya</code>,
+        <code>eno-mikrobiologiya</code>, <code>eno-kisloty-ph</code>, <code>eno-fenoly-cvet</code>,
+        <code>eno-redoks-kislorod</code>, <code>eno-aromat</code>, <code>eno-kolloidy-stabilnost</code>.
+      </p>
 
       <h2>Технологический стек</h2>
       <ul>

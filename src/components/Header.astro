@@ -4,18 +4,19 @@ const currentPath = Astro.url.pathname;
 
 const navLinks = [
   { href: `${base}`, label: 'Главная', exact: true },
-  { href: `${base}course`, label: 'Курс' },
+  { href: `${base}courses`, label: 'Курсы', match: `${base}course` },
   { href: `${base}tools`, label: 'Инструменты' },
   { href: `${base}study`, label: '🃏 Карточки' },
   { href: `${base}quiz`, label: '❓ Квиз' },
   { href: `${base}harvest`, label: 'Планировщик' },
   { href: `${base}glossary`, label: 'Глоссарий' },
-  { href: `${base}about`, label: 'О курсе' },
+  { href: `${base}about`, label: 'О проекте' },
 ];
 
-function isActive(href: string, exact = false) {
+function isActive(href: string, exact = false, match?: string) {
   if (exact) return currentPath === href || currentPath === href.replace(/\/$/, '');
-  return currentPath.startsWith(href) && href !== base;
+  const prefix = match ?? href;
+  return currentPath.startsWith(prefix) && prefix !== base;
 }
 ---
 
@@ -34,7 +35,7 @@ function isActive(href: string, exact = false) {
           <a
             href={link.href}
             class={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
-              ${isActive(link.href, link.exact)
+              ${isActive(link.href, link.exact, link.match)
                 ? 'bg-wine-50 text-wine-800 dark:bg-wine-950/50 dark:text-wine-300'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800'}`}
           >
@@ -82,7 +83,7 @@ function isActive(href: string, exact = false) {
           <a
             href={link.href}
             class={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
-              ${isActive(link.href, link.exact)
+              ${isActive(link.href, link.exact, link.match)
                 ? 'bg-wine-50 text-wine-800 dark:bg-wine-950/50 dark:text-wine-300'
                 : 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'}`}
           >

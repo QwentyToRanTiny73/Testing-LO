@@ -1,23 +1,28 @@
 ---
 import LessonLayout from '../../../layouts/LessonLayout.astro';
 import { getCollection } from 'astro:content';
-import { modules } from '../../../data/modules';
+import { modules, getModuleById } from '../../../data/modules';
 
 export async function getStaticPaths() {
   const allLessons = await getCollection('lessons');
+  const moduleCourse = new Map(modules.map(m => [m.id, m.course]));
+  const moduleOrder = new Map(modules.map(m => [m.id, m.order]));
 
-  // Sort all lessons by module order then lesson order
+  // Sort all lessons by course, then module order, then lesson order
   const sortedLessons = [...allLessons].sort((a, b) => {
-    const modA = modules.find(m => m.id === a.data.module)?.order ?? 99;
-    const modB = modules.find(m => m.id === b.data.module)?.order ?? 99;
+    const modA = moduleOrder.get(a.data.module) ?? 99;
+    const modB = moduleOrder.get(b.data.module) ?? 99;
     if (modA !== modB) return modA - modB;
     return a.data.order - b.data.order;
   });
 
   return allLessons.map(lesson => {
-    const idx = sortedLessons.findIndex(l => l.id === lesson.id);
-    const prevLesson = idx > 0 ? sortedLessons[idx - 1] : undefined;
-    const nextLesson = idx < sortedLessons.length - 1 ? sortedLessons[idx + 1] : undefined;
+    // Prev/next stay within the same course
+    const courseId = moduleCourse.get(lesson.data.module);
+    const courseLessons = sortedLessons.filter(l => moduleCourse.get(l.data.module) === courseId);
+    const idx = courseLessons.findIndex(l => l.id === lesson.id);
+    const prevLesson = idx > 0 ? courseLessons[idx - 1] : undefined;
+    const nextLesson = idx < courseLessons.length - 1 ? courseLessons[idx + 1] : undefined;
 
     const slugParts = lesson.slug.split('/');
     const lessonSlug = slugParts[slugParts.length - 1];
