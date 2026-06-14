@@ -1,0 +1,54 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import WineSimulator from '../components/simulator/WineSimulator';
+import { getCourseById, COURSE_SIMULYATSIYA } from '../data/courses';
+const base = import.meta.env.BASE_URL;
+const course = getCourseById(COURSE_SIMULYATSIYA);
+---
+
+<BaseLayout title="Симулятор виноделия" description="Интерактивный тренажёр: проведите вино от сбора урожая до розлива, принимая решения на каждом этапе">
+  <!-- Hero -->
+  <section class="bg-gradient-to-br from-emerald-900 via-teal-800 to-emerald-950 text-white py-14 px-4">
+    <div class="max-w-5xl mx-auto">
+      <nav class="flex items-center gap-2 text-sm text-white/70 mb-6">
+        <a href={base} class="hover:text-white">Главная</a>
+        <span>/</span>
+        <a href={`${base}courses`} class="hover:text-white">Курсы</a>
+        <span>/</span>
+        <span class="text-white">Симулятор</span>
+      </nav>
+      <div class="flex items-start gap-4">
+        <span class="text-5xl">🎮</span>
+        <div>
+          <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 backdrop-blur">Тренажёр</span>
+          <h1 class="text-3xl sm:text-4xl font-bold mt-2">От лозы до бутылки</h1>
+          <p class="text-lg text-white/80 mt-1">Проведите вино через весь цикл, принимая решения на каждом этапе</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <div class="rounded-xl border-l-4 border-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 p-4 text-sm text-emerald-800 dark:text-emerald-200 mb-8">
+      <strong>Как это работает:</strong> выберите сценарий и принимайте решения на каждом этапе — от срока сбора до розлива.
+      Каждый выбор меняет пять показателей вина (аромат, свежесть, структуру, стабильность, чистоту) и может спровоцировать дефект.
+      В конце вы получите дегустационную оценку и разбор всех решений. Числовые значения в заданиях — ориентиры, а не нормативы.
+    </div>
+
+    <WineSimulator client:load />
+
+    <div class="mt-10 text-sm text-stone-500 dark:text-stone-400">
+      <p>
+        Сценарии и логику решений можно редактировать в
+        <code class="text-xs bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">src/data/simulation.ts</code>.
+        Тренажёр опирается на принципы из практикума и курса энологии — встретив незнакомый термин,
+        загляните в <a href={`${base}glossary`} class="text-emerald-700 dark:text-emerald-400 hover:underline">глоссарий</a>.
+      </p>
+      {course && (
+        <p class="mt-2">
+          Это третий курс платформы — <a href={`${base}courses`} class="text-emerald-700 dark:text-emerald-400 hover:underline">все курсы</a>.
+        </p>
+      )}
+    </div>
+  </div>
+</BaseLayout>

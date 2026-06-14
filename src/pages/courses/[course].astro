@@ -7,7 +7,7 @@ import { getModulesByCourse } from '../../data/modules';
 
 export async function getStaticPaths() {
   const allLessons = await getCollection('lessons');
-  return courses.map((course) => {
+  return courses.filter((course) => course.kind !== 'simulation').map((course) => {
     const courseModules = getModulesByCourse(course.id);
     const lessonsByModule = new Map<string, typeof allLessons>();
     for (const m of courseModules) lessonsByModule.set(m.id, []);

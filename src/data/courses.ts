@@ -36,10 +36,21 @@ export interface Course {
   format: { icon: string; label: string; desc: string }[];
   accent: CourseAccent;
   order: number;
+  /**
+   * Тип курса. 'content' — обычный курс из модулей и уроков (контент-коллекция).
+   * 'simulation' — интерактивный курс-тренажёр (отдельная страница, без уроков).
+   * По умолчанию — 'content'.
+   */
+  kind?: 'content' | 'simulation';
+  /** Куда ведёт карточка курса (для simulation — на страницу тренажёра). */
+  href?: string;
+  /** Произвольные чипы статистики для каталога (для курсов без уроков). */
+  stats?: { label: string; value: string }[];
 }
 
 export const COURSE_PRAKTIKUM = 'praktikum';
 export const COURSE_ENOLOGIYA = 'enologiya';
+export const COURSE_SIMULYATSIYA = 'simulyatsiya';
 
 export const courses: Course[] = [
   {
@@ -115,6 +126,50 @@ export const courses: Course[] = [
       badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300',
     },
     order: 2,
+  },
+  {
+    id: COURSE_SIMULYATSIYA,
+    title: 'Симулятор: от лозы до бутылки',
+    subtitle: 'Интерактивный тренажёр принятия решений',
+    description:
+      'Проведите вино через весь цикл — от выбора срока сбора до розлива — принимая решения на каждом этапе. Каждый выбор меняет аромат, структуру, стабильность и чистоту вина; в конце вы получаете дегустационную оценку и разбор последствий. Два сценария: ароматическое белое и красное для выдержки.',
+    icon: '🎮',
+    level: 'Тренажёр',
+    durationLabel: '2 сценария · ~9 этапов решений каждый',
+    audience: [
+      'Те, кто прошёл практикум и хочет «собрать» процесс целиком',
+      'Виноделы, желающие проверить логику решений без риска для урожая',
+      'Студенты — для закрепления причинно-следственных связей',
+    ],
+    outcomes: [
+      'Видеть, как ранние решения каскадом влияют на финал',
+      'Связывать выбор у пресса и в погребе с итоговым стилем вина',
+      'Распознавать развилки, ведущие к дефектам, и избегать их',
+      'Принимать решения под конкретный стиль: свежесть против структуры',
+    ],
+    format: [
+      { icon: '🍇', label: 'Сценарии', desc: 'Ароматическое белое и красное для выдержки' },
+      { icon: '🔀', label: 'Решения', desc: 'Развилки с реальными технологическими опциями' },
+      { icon: '📊', label: 'Метрики', desc: 'Аромат, свежесть, структура, стабильность, чистота' },
+      { icon: '🏅', label: 'Оценка', desc: 'Дегустационный итог и разбор последствий' },
+    ],
+    accent: {
+      gradient: 'from-emerald-900 via-teal-800 to-emerald-950',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      bg: 'bg-emerald-700',
+      bgHover: 'hover:bg-emerald-800',
+      soft: 'bg-emerald-50 dark:bg-emerald-950/30',
+      borderHover: 'hover:border-emerald-300 dark:hover:border-emerald-700',
+      badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
+    },
+    order: 3,
+    kind: 'simulation',
+    href: 'simulator',
+    stats: [
+      { label: 'сценария', value: '2' },
+      { label: 'этапов решений', value: '18' },
+      { label: 'вариантов выбора', value: '60+' },
+    ],
   },
 ];
 
