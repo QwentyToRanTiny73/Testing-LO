@@ -43,22 +43,68 @@ function qualityBadge(q: SimChoice['quality']): { label: string; cls: string } {
   }
 }
 
+// Формулировки дегустационной заметки по стилю вина
+const NOTE_TEXT: Record<
+  SimScenario['noteStyle'],
+  {
+    aromaHigh: string;
+    aromaLow: string;
+    freshHigh: string;
+    structHigh: string;
+    structMid: string;
+    structLow: string;
+  }
+> = {
+  white: {
+    aromaHigh: 'Яркий, чистый сортовой аромат — цветы и мускат во всей полноте.',
+    aromaLow: 'Нос приглушён, сортовая ароматика во многом потеряна.',
+    freshHigh: 'Хрустящая свежесть держит вино живым и питким.',
+    structHigh: 'Приятная текстура и тело придают объём.',
+    structMid: 'Тело умеренное.',
+    structLow: 'Вино худощавое, плосковатое.',
+  },
+  red: {
+    aromaHigh: 'Глубокий выразительный нос: тёмные ягоды, специи, благородный дуб.',
+    aromaLow: 'Нос невыразительный, фрукт задавлен.',
+    freshHigh: 'Кислотный костяк свеж и уместен.',
+    structHigh: 'Плотная, но зрелая танинная структура — основа для долгой выдержки.',
+    structMid: 'Структура средняя, потенциал старения ограничен.',
+    structLow: 'Танинный каркас слабоват либо зелёный.',
+  },
+  rose: {
+    aromaHigh: 'Тонкий тиоловый аромат — грейпфрут, цитрус, ягодная свежесть.',
+    aromaLow: 'Аромат блёклый, тиоловая искра не раскрылась.',
+    freshHigh: 'Звонкая свежесть и лёгкая игра CO₂ — питко и легко.',
+    structHigh: 'Деликатное тело при бледном цвете — изящно и чисто.',
+    structMid: 'Тело лёгкое, как и положено стилю.',
+    structLow: 'Вино совсем тощее, не хватает плоти.',
+  },
+  orange: {
+    aromaHigh: 'Сложный нос: мускатные терпены, сухофрукты, чай и цедра.',
+    aromaLow: 'Аромат приглушён, терпены Муската во многом ушли.',
+    freshHigh: 'Кислотный костяк (Кокур) держит баланс на фоне танина.',
+    structHigh: 'Бархатистая фенольная текстура — янтарное тело с хваткой танина.',
+    structMid: 'Танинная текстура умеренная для оранжа.',
+    structLow: 'Для оранжа не хватает фенольного тела и цвета.',
+  },
+};
+
 // Дегустационная заметка из уровней метрик
 function tastingNote(scenario: SimScenario, m: Metrics, faults: string[]): string[] {
   const notes: string[] = [];
-  const isWhite = scenario.id === 'white-aromatic';
+  const t = NOTE_TEXT[scenario.noteStyle];
 
-  if (m.aroma >= 75) notes.push(isWhite ? 'Яркий, чистый сортовой аромат — цветы и мускат во всей полноте.' : 'Глубокий выразительный нос: тёмные ягоды, специи, благородный дуб.');
+  if (m.aroma >= 75) notes.push(t.aromaHigh);
   else if (m.aroma >= 55) notes.push('Аромат приятный, но сдержанный — раскрывается не полностью.');
-  else notes.push(isWhite ? 'Нос приглушён, сортовая ароматика во многом потеряна.' : 'Нос невыразительный, фрукт задавлен.');
+  else notes.push(t.aromaLow);
 
-  if (m.freshness >= 70) notes.push(isWhite ? 'Хрустящая свежесть держит вино живым и питким.' : 'Кислотный костяк свеж и уместен.');
+  if (m.freshness >= 70) notes.push(t.freshHigh);
   else if (m.freshness >= 45) notes.push('Баланс кислотности средний.');
   else notes.push('Вино вялое, не хватает кислотного стержня.');
 
-  if (m.structure >= 70) notes.push(isWhite ? 'Приятная текстура и тело придают объём.' : 'Плотная, но зрелая танинная структура — основа для долгой выдержки.');
-  else if (m.structure >= 45) notes.push(isWhite ? 'Тело умеренное.' : 'Структура средняя, потенциал старения ограничен.');
-  else notes.push(isWhite ? 'Вино худощавое, плосковатое.' : 'Танинный каркас слабоват либо зелёный.');
+  if (m.structure >= 70) notes.push(t.structHigh);
+  else if (m.structure >= 45) notes.push(t.structMid);
+  else notes.push(t.structLow);
 
   if (m.stability >= 70) notes.push('Вино стабильно — устойчиво в бутылке.');
   else if (m.stability >= 45) notes.push('Стабильность под вопросом: возможны помутнения или осадок.');
