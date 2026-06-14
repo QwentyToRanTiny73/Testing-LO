@@ -1,5 +1,6 @@
 ---
 import type { Module } from '../../data/modules';
+import { getCourseById } from '../../data/courses';
 
 interface Props {
   module?: Module;
@@ -7,12 +8,21 @@ interface Props {
 }
 const { module, lessonTitle } = Astro.props;
 const base = import.meta.env.BASE_URL;
+const course = module ? getCourseById(module.course) : undefined;
 ---
 
 <nav aria-label="Хлебные крошки" class="flex items-center gap-1.5 text-sm text-stone-500 dark:text-stone-400 mb-6">
   <a href={base} class="hover:text-wine-700 dark:hover:text-wine-400 transition-colors">Главная</a>
   <span>/</span>
-  <a href={`${base}course`} class="hover:text-wine-700 dark:hover:text-wine-400 transition-colors">Курс</a>
+  <a href={`${base}courses`} class="hover:text-wine-700 dark:hover:text-wine-400 transition-colors">Курсы</a>
+  {course && (
+    <>
+      <span>/</span>
+      <a href={`${base}courses/${course.id}`} class="hover:text-wine-700 dark:hover:text-wine-400 transition-colors truncate max-w-[120px]">
+        {course.title}
+      </a>
+    </>
+  )}
   {module && (
     <>
       <span>/</span>

@@ -3,7 +3,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import ModuleSidebar from '../../components/course/ModuleSidebar.astro';
 import ModuleProgressBar from '../../components/course/ModuleProgressBar.astro';
 import { getCollection } from 'astro:content';
-import { modules, getModuleById } from '../../data/modules';
+import { modules, getModulesByCourse } from '../../data/modules';
+import { getCourseById } from '../../data/courses';
 
 export async function getStaticPaths() {
   const allLessons = await getCollection('lessons');
@@ -11,14 +12,18 @@ export async function getStaticPaths() {
     const lessons = allLessons
       .filter(l => l.data.module === mod.id)
       .sort((a, b) => a.data.order - b.data.order);
+    const courseModules = getModulesByCourse(mod.course);
+    const moduleCount = courseModules.length;
+    const moduleIndex = courseModules.findIndex(m => m.id === mod.id) + 1;
     return {
       params: { module: mod.id },
-      props: { mod, lessons },
+      props: { mod, lessons, moduleCount, moduleIndex },
     };
   });
 }
 
-const { mod, lessons } = Astro.props;
+const { mod, lessons, moduleCount, moduleIndex } = Astro.props;
+const course = getCourseById(mod.course);
 const base = import.meta.env.BASE_URL;
 const totalTime = lessons.reduce((s: number, l: any) => s + l.data.durationMin, 0);
 ---
@@ -38,7 +43,9 @@ const totalTime = lessons.reduce((s: number, l: any) => s + l.data.durationMin, 
         <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
           <a href={base} class="hover:text-wine-700">Главная</a>
           <span>/</span>
-          <a href={`${base}course`} class="hover:text-wine-700">Курс</a>
+          <a href={`${base}courses`} class="hover:text-wine-700">Курсы</a>
+          <span>/</span>
+          <a href={`${base}courses/${mod.course}`} class="hover:text-wine-700 truncate max-w-[160px]">{course?.title}</a>
           <span>/</span>
           <span class="text-stone-700 dark:text-stone-300 truncate">{mod.title}</span>
         </nav>
@@ -47,7 +54,7 @@ const totalTime = lessons.reduce((s: number, l: any) => s + l.data.durationMin, 
           <div class="flex items-center gap-4 mb-4">
             <span class="text-4xl">{mod.icon}</span>
             <div>
-              <div class="text-xs text-stone-400 dark:text-stone-500 mb-0.5">Модуль {mod.order} из {modules.length}</div>
+              <div class="text-xs text-stone-400 dark:text-stone-500 mb-0.5">Модуль {moduleIndex} из {moduleCount}</div>
               <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100">{mod.title}</h1>
             </div>
           </div>

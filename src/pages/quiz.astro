@@ -1,0 +1,84 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ModuleQuiz from '../components/learning/ModuleQuiz';
+import MindMap from '../components/learning/MindMap';
+import { quizQuestions } from '../data/quizzes';
+import { mindMaps } from '../data/mindmaps';
+import { modules } from '../data/modules';
+const base = import.meta.env.BASE_URL;
+
+const moduleParam = Astro.url.searchParams.get('module') ?? undefined;
+const activeModule = moduleParam ? modules.find(m => m.id === moduleParam) : undefined;
+const mindMap = moduleParam ? mindMaps[moduleParam] : undefined;
+
+const qByModule = new Map<string, number>();
+for (const q of quizQuestions) {
+  qByModule.set(q.moduleId, (qByModule.get(q.moduleId) || 0) + 1);
+}
+---
+
+<BaseLayout title="Квиз" description="Проверка знаний по технологии виноделия в формате Сократа">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+    <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
+      <a href={base} class="hover:text-wine-700">Главная</a>
+      <span>/</span>
+      <span class="text-stone-700 dark:text-stone-300">Квиз</span>
+    </nav>
+
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">❓ Квиз</h1>
+      <p class="text-stone-500 dark:text-stone-400">
+        Метод Сократа: вопросы с глубокими объяснениями и «Почему?» для развития понимания.
+      </p>
+    </div>
+
+    <!-- Module filter -->
+    <div class="flex flex-wrap gap-2 mb-6">
+      <a href={`${base}quiz`}
+        class={`text-xs px-3 py-1.5 rounded-full border transition-colors
+          ${!moduleParam
+            ? 'bg-wine-700 text-white border-wine-700'
+            : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400'}`}>
+        Все ({quizQuestions.length})
+      </a>
+      {[...qByModule.entries()].map(([modId, count]) => {
+        const mod = modules.find(m => m.id === modId);
+        return mod ? (
+          <a href={`${base}quiz?module=${modId}`}
+            class={`text-xs px-3 py-1.5 rounded-full border transition-colors
+              ${moduleParam === modId
+                ? 'bg-wine-700 text-white border-wine-700'
+                : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400'}`}>
+            {mod.icon} {mod.title.substring(0, 22)} ({count})
+          </a>
+        ) : null;
+      })}
+    </div>
+
+    <!-- Mind map for selected module -->
+    {mindMap && (
+      <div class="mb-8">
+        <h2 class="text-lg font-semibold text-stone-800 dark:text-stone-200 mb-3">🗺 Майндкарта модуля</h2>
+        <MindMap client:load root={mindMap} />
+      </div>
+    )}
+
+    <!-- Quiz -->
+    <div class="card">
+      <ModuleQuiz
+        client:load
+        questions={quizQuestions}
+        moduleId={moduleParam}
+        title={activeModule?.title}
+      />
+    </div>
+
+    <!-- Links to study -->
+    <div class="mt-6 text-center text-sm text-stone-500 dark:text-stone-400">
+      После квиза закрепите материал:
+      <a href={`${base}study${moduleParam ? `?module=${moduleParam}` : ''}`} class="text-wine-700 dark:text-wine-400 hover:underline ml-1">
+        → Флэш-карты
+      </a>
+    </div>
+  </div>
+</BaseLayout>

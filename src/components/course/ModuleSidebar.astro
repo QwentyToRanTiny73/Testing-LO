@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
-import { modules } from '../../data/modules';
+import { getModuleById, getModulesByCourse } from '../../data/modules';
+import { getCourseById, DEFAULT_COURSE } from '../../data/courses';
 
 interface Props {
   currentModule: string;
@@ -8,6 +9,10 @@ interface Props {
 }
 const { currentModule, currentLesson } = Astro.props;
 const base = import.meta.env.BASE_URL;
+
+const courseId = getModuleById(currentModule)?.course ?? DEFAULT_COURSE;
+const course = getCourseById(courseId);
+const modules = getModulesByCourse(courseId);
 
 const allLessons = await getCollection('lessons');
 const moduleMap = new Map<string, typeof allLessons>();
@@ -22,7 +27,9 @@ for (const [, lessons] of moduleMap) {
 ---
 
 <nav class="text-sm">
-  <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-3 px-2">Модули курса</h2>
+  <a href={`${base}courses/${courseId}`} class="block text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-3 px-2 hover:text-wine-600 dark:hover:text-wine-400 transition-colors truncate">
+    {course?.icon} {course?.title ?? 'Модули курса'}
+  </a>
   <ul class="space-y-1">
     {modules.map(mod => {
       const lessons = moduleMap.get(mod.id) || [];
