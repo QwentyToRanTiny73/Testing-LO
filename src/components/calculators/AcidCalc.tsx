@@ -1,21 +1,19 @@
 import { useState } from 'react';
 
 export default function AcidCalc() {
-  const [currentTA, setCurrentTA] = useState(6.5);
-  const [targetTA, setTargetTA] = useState(7.5);
-  const [volumeL, setVolumeL] = useState(1000);
+  const [currentTA, setCurrentTA] = useState('6.5');
+  const [targetTA, setTargetTA] = useState('7.5');
+  const [volumeL, setVolumeL] = useState('1000');
   const [mode, setMode] = useState<'acidify' | 'deacidify'>('acidify');
   const [result, setResult] = useState<{ grams: number; reagent: string } | null>(null);
 
   function calculate() {
-    const diff = Math.abs(targetTA - currentTA); // g/L as tartaric eq
-    const grams = diff * volumeL; // total grams needed
+    const diff = Math.abs((parseFloat(targetTA) || 0) - (parseFloat(currentTA) || 0));
+    const grams = diff * (parseFloat(volumeL) || 0);
 
     if (mode === 'acidify') {
-      // Tartaric acid: 1 g/L increases TA by ~1 g/L (as tartaric)
       setResult({ grams, reagent: 'винная кислота (L-tartaric acid)' });
     } else {
-      // KHCO3 (potassium bicarbonate): ~0.67 g/L reduces TA by 1 g/L (orientation)
       setResult({ grams: grams * 0.67, reagent: 'бикарбонат калия (KHCO₃)' });
     }
   }
@@ -41,17 +39,17 @@ export default function AcidCalc() {
         <div>
           <label className="label">Текущая ТК (г/л по винной)</label>
           <input type="number" className="input" value={currentTA} step={0.1}
-            onChange={e => setCurrentTA(Number(e.target.value))} />
+            onChange={e => setCurrentTA(e.target.value)} />
         </div>
         <div>
           <label className="label">Целевая ТК (г/л)</label>
           <input type="number" className="input" value={targetTA} step={0.1}
-            onChange={e => setTargetTA(Number(e.target.value))} />
+            onChange={e => setTargetTA(e.target.value)} />
         </div>
         <div>
           <label className="label">Объём (л)</label>
           <input type="number" className="input" value={volumeL} min={1}
-            onChange={e => setVolumeL(Number(e.target.value))} />
+            onChange={e => setVolumeL(e.target.value)} />
         </div>
       </div>
 

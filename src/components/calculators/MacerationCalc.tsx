@@ -9,7 +9,7 @@ interface MacData {
 }
 
 type Style = 'light' | 'medium' | 'full';
-type Method = 'open' | 'closed' | 'remontage' | 'pigeage';
+type Method = 'open' | 'closed' | 'remontage' | 'pigeage' | 'batonnage';
 
 const macTable: Record<string, Record<Style, MacData>> = {
   'Каберне Совиньон': {
@@ -39,12 +39,13 @@ const methodNotes: Record<Method, string> = {
   closed:    'Закрытый чан снижает риск окисления, контроль шапки через ремонтаж.',
   remontage: 'Ремонтаж (перекачка с орошением шапки) — мягкое воздействие, типично 2–3× в день (ориентир).',
   pigeage:   'Пижаж (погружение шапки) — интенсивная экстракция, особенно эффективен в первые дни.',
+  batonnage: 'Батонаж (взмучивание осадка) — приём для белых и оранжевых вин на выдержке на дрожжевом осадке: периодическое перемешивание обогащает вино маннопротеинами, придаёт объём и округлость текстуры. Не является методом работы с шапкой при мацерации красных вин.',
 };
 
 export default function MacerationCalc() {
   const [variety, setVariety] = useState('Каберне Совиньон');
   const [style, setStyle] = useState<Style>('medium');
-  const [temp, setTemp] = useState(28);
+  const [temp, setTemp] = useState('18');
   const [method, setMethod] = useState<Method>('remontage');
   const [result, setResult] = useState<MacData | null>(null);
 
@@ -59,16 +60,18 @@ export default function MacerationCalc() {
     { value: 'closed',    label: 'Закрытый чан' },
     { value: 'remontage', label: 'Ремонтаж' },
     { value: 'pigeage',   label: 'Пижаж' },
+    { value: 'batonnage', label: 'Батонаж' },
   ];
 
   function calculate() {
     const base = macTable[variety]?.[style];
     if (!base) return;
-    // Temperature correction: warmer → slightly shorter (orientation)
+    const tempN = parseFloat(temp) || 18;
+    // Cellar temp correction: warmer cellar → higher must temp → slightly shorter maceration
     let tempAdj = 0;
-    if (temp > 30) tempAdj = -1;
-    if (temp > 33) tempAdj = -2;
-    if (temp < 22) tempAdj = 1;
+    if (tempN > 22) tempAdj = -1;
+    if (tempN > 25) tempAdj = -2;
+    if (tempN < 14) tempAdj = 1;
 
     setResult({
       minDays: Math.max(1, base.minDays + tempAdj),
@@ -93,14 +96,14 @@ export default function MacerationCalc() {
           </select>
         </div>
         <div>
-          <label className="label">Температура мацерации (°C) <span className="text-stone-400 text-xs">(ориентир: 26–32°C)</span></label>
+          <label className="label">Температура в погребе/помещении (°C) <span className="text-stone-400 text-xs">(ориентир: 14–22°C)</span></label>
           <input
             type="number"
             className="input"
             value={temp}
-            min={15}
-            max={40}
-            onChange={e => setTemp(Number(e.target.value))}
+            min={5}
+            max={35}
+            onChange={e => setTemp(e.target.value)}
           />
         </div>
         <div>

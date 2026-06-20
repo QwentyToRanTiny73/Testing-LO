@@ -22,11 +22,13 @@ function densityToBrix(d: number) {
 }
 
 export default function BrixConverter() {
-  const [brix, setBrix] = useState(22);
-  const [measTemp, setMeasTemp] = useState(20);
+  const [brix, setBrix] = useState('22');
+  const [measTemp, setMeasTemp] = useState('20');
   const [calTemp] = useState(20);
 
-  const tempCorrBrix = brix + (measTemp - calTemp) * 0.0007;
+  const brixN = parseFloat(brix) || 0;
+  const measTempN = parseFloat(measTemp) || 0;
+  const tempCorrBrix = brixN + (measTempN - calTemp) * 0.0007;
 
   return (
     <div className="space-y-5">
@@ -34,12 +36,12 @@ export default function BrixConverter() {
         <div>
           <label className="label">Brix (рефрактометр)</label>
           <input type="number" className="input" value={brix} step={0.1}
-            onChange={e => setBrix(Number(e.target.value))} />
+            onChange={e => setBrix(e.target.value)} />
         </div>
         <div>
           <label className="label">Температура измерения (°C)</label>
           <input type="number" className="input" value={measTemp} step={0.5}
-            onChange={e => setMeasTemp(Number(e.target.value))} />
+            onChange={e => setMeasTemp(e.target.value)} />
           <p className="text-xs text-stone-400 mt-1">Ареометр откалиброван при 20°C</p>
         </div>
       </div>
