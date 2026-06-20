@@ -32,52 +32,57 @@ const REAGENTS: Reagent[] = [
 
 type Mode = 'free' | 'molecular';
 
-function num(v: string, fallback = 0): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
 export default function SO2Calc() {
   const [mode, setMode] = useState<Mode>('free');
-  const [pH, setPH] = useState(3.4);
-  const [volume, setVolume] = useState(100);
-  const [currentFree, setCurrentFree] = useState(15);
-  const [targetFree, setTargetFree] = useState(30);
-  const [targetMolecular, setTargetMolecular] = useState(0.8);
+  const [pH, setPH] = useState('3.4');
+  const [volume, setVolume] = useState('100');
+  const [currentFree, setCurrentFree] = useState('15');
+  const [targetFree, setTargetFree] = useState('30');
+  const [targetMolecular, setTargetMolecular] = useState('0.8');
   const [reagentId, setReagentId] = useState('kms');
-  const [purity, setPurity] = useState(57.6);
-  const [efficiency, setEfficiency] = useState(100); // % внесённого SO₂, остающегося свободным
-  const [currentTotal, setCurrentTotal] = useState(80);
-  const [maxTotal, setMaxTotal] = useState(200);
+  const [purity, setPurity] = useState('57.6');
+  const [efficiency, setEfficiency] = useState('100');
+  const [currentTotal, setCurrentTotal] = useState('80');
+  const [maxTotal, setMaxTotal] = useState('200');
 
   const reagent = REAGENTS.find((r) => r.id === reagentId)!;
+
+  const pHP = parseFloat(pH) || 3.4;
+  const volumeN = parseFloat(volume) || 0;
+  const currentFreeN = parseFloat(currentFree) || 0;
+  const targetFreeN = parseFloat(targetFree) || 0;
+  const targetMolecularN = parseFloat(targetMolecular) || 0;
+  const purityN = parseFloat(purity) || 57.6;
+  const efficiencyN = parseFloat(efficiency) || 100;
+  const currentTotalN = parseFloat(currentTotal) || 0;
+  const maxTotalN = parseFloat(maxTotal) || 200;
 
   function onReagentChange(id: string) {
     const r = REAGENTS.find((x) => x.id === id)!;
     setReagentId(id);
-    setPurity(r.pct);
+    setPurity(String(r.pct));
   }
 
   const r = useMemo(() => {
-    const fraction = molecularFraction(pH); // 0..1
+    const fraction = molecularFraction(pHP); // 0..1
     // Целевой свободный SO₂: либо задан напрямую, либо выводится из целевого молекулярного.
-    const reqFree = mode === 'free' ? targetFree : (fraction > 0 ? targetMolecular / fraction : 0);
+    const reqFree = mode === 'free' ? targetFreeN : (fraction > 0 ? targetMolecularN / fraction : 0);
 
-    const netAddition = Math.max(0, reqFree - currentFree); // мг/л, «чистая» прибавка к свободному
-    const eff = Math.min(Math.max(efficiency, 1), 100) / 100;
+    const netAddition = Math.max(0, reqFree - currentFreeN); // мг/л, «чистая» прибавка к свободному
+    const eff = Math.min(Math.max(efficiencyN, 1), 100) / 100;
     const grossAddition = netAddition / eff; // мг/л SO₂ внести с учётом связывания
 
     // Количество реагента
-    const so2Grams = (grossAddition * volume) / 1000; // г чистого SO₂ на весь объём
-    const pctFrac = Math.max(purity, 0.0001) / 100;
+    const so2Grams = (grossAddition * volumeN) / 1000; // г чистого SO₂ на весь объём
+    const pctFrac = Math.max(purityN, 0.0001) / 100;
 
     let reagentAmount: number; // г (solid/gas) или мл (liquid)
     let reagentPerHl: number;
     let unit: string;
     if (reagent.phase === 'liquid') {
-      // purity = г SO₂ на 100 мл → мл = гSO₂ * 100 / purity
-      reagentAmount = (so2Grams * 100) / purity;
-      reagentPerHl = (grossAddition * 100) / 1000 * 100 / purity; // мл/гл
+      // purityN = г SO₂ на 100 мл → мл = гSO₂ * 100 / purityN
+      reagentAmount = (so2Grams * 100) / purityN;
+      reagentPerHl = (grossAddition * 100) / 1000 * 100 / purityN; // мл/гл
       unit = 'мл';
     } else {
       reagentAmount = so2Grams / pctFrac;
@@ -86,8 +91,8 @@ export default function SO2Calc() {
     }
 
     const molAtTarget = reqFree * fraction;
-    const molNow = currentFree * fraction;
-    const projectedTotal = currentTotal + grossAddition;
+    const molNow = currentFreeN * fraction;
+    const projectedTotal = currentTotalN + grossAddition;
 
     return {
       fraction,
@@ -101,10 +106,10 @@ export default function SO2Calc() {
       molNow,
       projectedTotal,
     };
-  }, [mode, pH, volume, currentFree, targetFree, targetMolecular, reagent, purity, efficiency, currentTotal, maxTotal]);
+  }, [mode, pHP, volumeN, currentFreeN, targetFreeN, targetMolecularN, reagent, purityN, efficiencyN, currentTotalN, maxTotalN]);
 
   // Рекомендация по молекулярному SO₂ (ориентир по типу вина)
-  const molGuide = pH >= 3.6 ? 'высокий pH — для защиты нужен заметно больший свободный SO₂' : 'умеренный pH';
+  const molGuide = pHP >= 3.6 ? 'высокий pH — для защиты нужен заметно больший свободный SO₂' : 'умеренный pH';
 
   return (
     <div className="space-y-6">
@@ -147,32 +152,32 @@ export default function SO2Calc() {
         <div>
           <label className="label">pH вина</label>
           <input type="number" className="input" value={pH} min={2.8} max={4.5} step={0.01}
-            onChange={(e) => setPH(num(e.target.value, pH))} />
+            onChange={(e) => setPH(e.target.value)} />
           <p className="text-xs text-stone-400 mt-1">{molGuide}</p>
         </div>
         <div>
           <label className="label">Объём вина (л)</label>
           <input type="number" className="input" value={volume} min={1}
-            onChange={(e) => setVolume(num(e.target.value, volume))} />
+            onChange={(e) => setVolume(e.target.value)} />
         </div>
         <div>
           <label className="label">Текущий свободный SO₂ (мг/л)</label>
           <input type="number" className="input" value={currentFree} min={0}
-            onChange={(e) => setCurrentFree(num(e.target.value, currentFree))} />
+            onChange={(e) => setCurrentFree(e.target.value)} />
           <p className="text-xs text-stone-400 mt-1">По анализу (метод Риппера / аспирация)</p>
         </div>
         {mode === 'free' ? (
           <div>
             <label className="label">Целевой свободный SO₂ (мг/л)</label>
             <input type="number" className="input" value={targetFree} min={0} step={1}
-              onChange={(e) => setTargetFree(num(e.target.value, targetFree))} />
-            <p className="text-xs text-stone-400 mt-1">При pH {pH.toFixed(2)} это даст ≈ {r.molAtTarget.toFixed(2)} мг/л молекулярного</p>
+              onChange={(e) => setTargetFree(e.target.value)} />
+            <p className="text-xs text-stone-400 mt-1">При pH {pHP.toFixed(2)} это даст ≈ {r.molAtTarget.toFixed(2)} мг/л молекулярного</p>
           </div>
         ) : (
           <div>
             <label className="label">Целевой молекулярный SO₂ (мг/л)</label>
             <input type="number" className="input" value={targetMolecular} min={0.1} max={2.0} step={0.05}
-              onChange={(e) => setTargetMolecular(num(e.target.value, targetMolecular))} />
+              onChange={(e) => setTargetMolecular(e.target.value)} />
             <p className="text-xs text-stone-400 mt-1">Ориентир: сухие 0,5–0,8 · сладкие/риск Brett до ~1,5</p>
           </div>
         )}
@@ -196,24 +201,24 @@ export default function SO2Calc() {
           <div>
             <label className="label">{reagent.phase === 'liquid' ? 'Концентрация (г SO₂ / 100 мл)' : 'Содержание SO₂ (%)'}</label>
             <input type="number" className="input" value={purity} min={1} max={100} step={0.1}
-              onChange={(e) => setPurity(num(e.target.value, purity))} />
+              onChange={(e) => setPurity(e.target.value)} />
             <p className="text-xs text-stone-400 mt-1">Уточняйте по паспорту препарата</p>
           </div>
           <div>
             <label className="label">Эффективность (% остаётся свободным)</label>
             <input type="number" className="input" value={efficiency} min={1} max={100} step={1}
-              onChange={(e) => setEfficiency(num(e.target.value, efficiency))} />
+              onChange={(e) => setEfficiency(e.target.value)} />
             <p className="text-xs text-stone-400 mt-1">100 % — для стабильного вина; молодое/сусло связывает больше — снизьте</p>
           </div>
           <div>
             <label className="label">Текущий общий SO₂ (мг/л)</label>
             <input type="number" className="input" value={currentTotal} min={0}
-              onChange={(e) => setCurrentTotal(num(e.target.value, currentTotal))} />
+              onChange={(e) => setCurrentTotal(e.target.value)} />
           </div>
           <div>
             <label className="label">Предел общего SO₂ (мг/л)</label>
             <input type="number" className="input" value={maxTotal} min={0}
-              onChange={(e) => setMaxTotal(num(e.target.value, maxTotal))} />
+              onChange={(e) => setMaxTotal(e.target.value)} />
             <p className="text-xs text-stone-400 mt-1">Ориентир; зависит от типа вина и норматива</p>
           </div>
         </div>
@@ -224,7 +229,7 @@ export default function SO2Calc() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-lg bg-stone-100 dark:bg-stone-800 p-3 text-center">
             <div className="text-xl font-bold text-stone-800 dark:text-stone-200">{(r.fraction * 100).toFixed(2)}%</div>
-            <div className="text-xs text-stone-500 mt-0.5">Доля молек. при pH {pH.toFixed(2)}</div>
+            <div className="text-xs text-stone-500 mt-0.5">Доля молек. при pH {pHP.toFixed(2)}</div>
           </div>
           <div className="rounded-lg bg-stone-100 dark:bg-stone-800 p-3 text-center">
             <div className="text-xl font-bold text-stone-800 dark:text-stone-200">{r.reqFree.toFixed(1)}</div>
@@ -242,13 +247,13 @@ export default function SO2Calc() {
 
         {r.netAddition <= 0 ? (
           <div className="rounded-lg border-l-4 border-green-500 bg-green-50 dark:bg-green-950/20 p-3 text-sm text-green-800 dark:text-green-300">
-            Текущий свободный SO₂ ({currentFree} мг/л) уже достигает цели ({r.reqFree.toFixed(1)} мг/л). Внесение не требуется.
+            Текущий свободный SO₂ ({currentFreeN} мг/л) уже достигает цели ({r.reqFree.toFixed(1)} мг/л). Внесение не требуется.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-xl bg-wine-700 dark:bg-wine-800 p-4 text-center sm:col-span-1">
               <div className="text-2xl font-bold text-white">{r.reagentAmount.toFixed(2)} {r.unit}</div>
-              <div className="text-xs text-wine-200 mt-0.5">{reagent.name.split('(')[0].trim()} на {volume} л</div>
+              <div className="text-xs text-wine-200 mt-0.5">{reagent.name.split('(')[0].trim()} на {volumeN} л</div>
             </div>
             <div className="rounded-lg bg-stone-100 dark:bg-stone-800 p-4 text-center">
               <div className="text-xl font-bold text-stone-800 dark:text-stone-200">{r.reagentPerHl.toFixed(2)} {r.unit}/гл</div>
@@ -262,9 +267,9 @@ export default function SO2Calc() {
         )}
 
         {/* Контроль общего SO₂ */}
-        <div className={`rounded-lg border-l-4 p-3 text-sm ${r.projectedTotal > maxTotal ? 'border-red-500 bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300' : 'border-stone-300 bg-stone-50 dark:bg-stone-800/40 text-stone-600 dark:text-stone-300'}`}>
-          Прогноз общего SO₂ после внесения: <strong>{r.projectedTotal.toFixed(0)} мг/л</strong> (предел {maxTotal} мг/л).
-          {r.projectedTotal > maxTotal && ' ⚠️ Превышение предела — уменьшите дозу или цель.'}
+        <div className={`rounded-lg border-l-4 p-3 text-sm ${r.projectedTotal > maxTotalN ? 'border-red-500 bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300' : 'border-stone-300 bg-stone-50 dark:bg-stone-800/40 text-stone-600 dark:text-stone-300'}`}>
+          Прогноз общего SO₂ после внесения: <strong>{r.projectedTotal.toFixed(0)} мг/л</strong> (предел {maxTotalN} мг/л).
+          {r.projectedTotal > maxTotalN && ' ⚠️ Превышение предела — уменьшите дозу или цель.'}
         </div>
 
         <div className="rounded-lg border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-amber-800 dark:text-amber-300">

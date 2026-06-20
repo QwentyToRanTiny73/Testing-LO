@@ -13,7 +13,7 @@ export default function BentoniteCalc() {
   const [trials, setTrials] = useState<Trial[]>(
     PRESET_DOSES.map(dose => ({ dose, heatStable: false }))
   );
-  const [volume, setVolume] = useState(1000);
+  const [volume, setVolume] = useState('1000');
   const [result, setResult] = useState<{ recDose: number; weightKg: number } | null>(null);
   const [customDose, setCustomDose] = useState('');
 
@@ -42,7 +42,7 @@ export default function BentoniteCalc() {
     // Recommended dose = lowest dose that passes heat test + safety margin
     const minStable = Math.min(...stable.map(t => t.dose));
     const recDose = minStable; // g/hL (apply directly; some prefer +10% margin)
-    const weightKg = (recDose * volume) / 100 / 1000; // g/hL × hL / 1000 → kg
+    const weightKg = (recDose * (parseFloat(volume) || 0)) / 100 / 1000; // g/hL × hL / 1000 → kg
     setResult({ recDose, weightKg });
   }
 
@@ -64,7 +64,7 @@ export default function BentoniteCalc() {
       <div>
         <label className="label">Объём вина (л)</label>
         <input type="number" className="input max-w-xs" value={volume} min={1}
-          onChange={e => setVolume(Number(e.target.value))} />
+          onChange={e => setVolume(e.target.value)} />
       </div>
 
       {/* Trial doses table */}

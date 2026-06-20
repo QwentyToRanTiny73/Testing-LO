@@ -1,19 +1,21 @@
 import { useState } from 'react';
 
-// Simplified: 1 g/L sugar → ~0.0595% alcohol (orientation, varies by yeast/conditions)
 const SUGAR_TO_ALCOHOL = 0.0595;
 
 export default function SugarCalc() {
-  const [currentSugar, setCurrentSugar] = useState(200);
-  const [targetSugar, setTargetSugar] = useState(220);
-  const [volumeL, setVolumeL] = useState(1000);
+  const [currentSugar, setCurrentSugar] = useState('200');
+  const [targetSugar, setTargetSugar] = useState('220');
+  const [volumeL, setVolumeL] = useState('1000');
   const [result, setResult] = useState<{ sugarKg: number; extraAlcohol: number; totalAlcohol: number } | null>(null);
 
   function calculate() {
-    const diff = Math.max(0, targetSugar - currentSugar);
-    const sugarKg = (diff * volumeL) / 1000;
+    const cs = parseFloat(currentSugar) || 0;
+    const ts = parseFloat(targetSugar) || 0;
+    const vl = parseFloat(volumeL) || 0;
+    const diff = Math.max(0, ts - cs);
+    const sugarKg = (diff * vl) / 1000;
     const extraAlcohol = diff * SUGAR_TO_ALCOHOL;
-    const totalAlcohol = targetSugar * SUGAR_TO_ALCOHOL;
+    const totalAlcohol = ts * SUGAR_TO_ALCOHOL;
     setResult({ sugarKg, extraAlcohol, totalAlcohol });
   }
 
@@ -23,17 +25,17 @@ export default function SugarCalc() {
         <div>
           <label className="label">Текущий сахар (г/л)</label>
           <input type="number" className="input" value={currentSugar} min={0}
-            onChange={e => setCurrentSugar(Number(e.target.value))} />
+            onChange={e => setCurrentSugar(e.target.value)} />
         </div>
         <div>
           <label className="label">Целевой сахар (г/л)</label>
           <input type="number" className="input" value={targetSugar} min={0}
-            onChange={e => setTargetSugar(Number(e.target.value))} />
+            onChange={e => setTargetSugar(e.target.value)} />
         </div>
         <div>
           <label className="label">Объём (л)</label>
           <input type="number" className="input" value={volumeL} min={1}
-            onChange={e => setVolumeL(Number(e.target.value))} />
+            onChange={e => setVolumeL(e.target.value)} />
         </div>
       </div>
 
