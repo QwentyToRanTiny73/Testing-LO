@@ -6,6 +6,7 @@ import BentoniteCalc from '../components/calculators/BentoniteCalc';
 import SugarCalc from '../components/calculators/SugarCalc';
 import AcidCalc from '../components/calculators/AcidCalc';
 import BrixConverter from '../components/calculators/BrixConverter';
+import VesselParkCalc from '../components/calculators/VesselParkCalc';
 const base = import.meta.env.BASE_URL;
 
 const tools = [
@@ -15,6 +16,7 @@ const tools = [
   { id: 'sugar',      icon: '🍬', title: 'Коррекция сахара', desc: 'Шаптализация и прогноз содержания спирта' },
   { id: 'acid',       icon: '🧪', title: 'Коррекция кислотности', desc: 'Подкисление (винная кислота) / раскисление (KHCO₃)' },
   { id: 'brix',       icon: '📏', title: 'Конвертер Brix/Oechsle', desc: 'Пересчёт сахаристости и температурная коррекция' },
+  { id: 'vessel-park', icon: '🛢️', title: 'Парк ёмкостей', desc: 'Планирование ёмкостей кампании по тоннажу и долям' },
 ];
 ---
 
@@ -118,6 +120,18 @@ const tools = [
           </div>
         </div>
         <BrixConverter client:load />
+      </section>
+
+      <!-- Vessel park planner -->
+      <section id="vessel-park" class="card">
+        <div class="flex items-start gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <span class="text-3xl">🛢️</span>
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Планировщик парка ёмкостей</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Распределение кампании по бродильным ёмкостям: объёмы потоков, розе-самотёк, запас на заполнение</p>
+          </div>
+        </div>
+        <VesselParkCalc client:load />
       </section>
     </div>
   </div>

@@ -95,6 +95,27 @@ updated: 2024-10-15
 | `analitika` | Аналитический контроль |
 | `sorta` | Сорта и сырьё |
 | `defekty` | Дефекты и коррекция |
+| `stili-vina` | Стили и виды вина |
+
+## Как добавить сценарий в симулятор
+
+Сценарии тренажёра `/simulator` описаны данными в `src/data/simulation.ts`; логика игры и вёрстка — в `src/components/simulator/WineSimulator.tsx`.
+
+1. **Опишите сценарий** объектом `SimScenario` (id, title, grape, style, icon, difficulty, `noteStyle`, intro, goal, `stages[]`). Каждый `SimStage` — этап с `question` и 3 вариантами `SimChoice` (best / ok / poor), где `effects` меняют пять метрик (`aroma`, `freshness`, `structure`, `stability`, `purity`), а `fault` помечает спровоцированный дефект.
+2. **Зарегистрируйте** сценарий в массиве `scenarios` в конце файла.
+3. **Если добавляете новый `noteStyle`** — расширьте union `NoteStyle` в `simulation.ts` и добавьте соответствующий блок формулировок в `NOTE_TEXT` в `WineSimulator.tsx`.
+4. **Обновите счётчики** в `src/data/courses.ts` (карточка `COURSE_SIMULYATSIYA`: `stats`, `durationLabel`, `description`). Число этапов в карточке сценария считается автоматически из `stages.length`.
+
+Новую ось оценки без необходимости не вводите — ресурсные/планировочные ограничения выражайте через существующие метрики (например, конфликт ёмкостей → `stability`/`purity`).
+
+## Как добавить калькулятор
+
+Калькуляторы `/tools` — React-острова в `src/components/calculators/`, подключаются в `src/pages/tools.astro`.
+
+1. **Создайте компонент** `src/components/calculators/<Name>.tsx`. Для числовых полей используйте строковое состояние (`useState('700')`) и `parseFloat(...)` при расчёте — так пустое поле не «залипает» на нуле.
+2. **Подключите** его в `tools.astro`: добавьте `import`, запись в массив `tools` (для быстрой навигации) и `<section>` с `<Name client:load />`.
+3. **Обновите** подпись «N практических инструментов» в `src/data/courses.ts` (формат курса `praktikum`).
+4. Все коэффициенты помечайте как ориентиры и сохраняйте общий дисклеймер.
 
 ## Данные планировщика урожая
 
