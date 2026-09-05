@@ -8,6 +8,7 @@ import {
   type SimChoice,
   type MetricKey,
 } from '../../data/simulation';
+import { ReagentChips, ReagentDialog } from './ReagentInfo';
 
 const BASE_URL = '/Testing-LO/';
 
@@ -95,6 +96,14 @@ const NOTE_TEXT: Record<
     structMid: 'Структура потоков средняя — без провалов, но и без блеска.',
     structLow: 'Телу и структуре потоков не хватает наполненности.',
   },
+  season: {
+    aromaHigh: 'Мускат узнаётся сортово, но без парфюмного перебора — задача сезона решена; Кокур держит фон.',
+    aromaLow: 'Ароматика сезона потеряна: Мускат либо задавлен, либо ушёл в парфюмность, которую нечем разбавить.',
+    freshHigh: 'Кислотный профиль розе близок к эталону 2025 года — свежесть на месте по всем партиям.',
+    structHigh: 'Цвет розе держится вишнёво-розовым, красное собрано дубом, Мускат получил объём на осадке.',
+    structMid: 'Структура и цвет в рабочем коридоре, но до эталона партии не дотянули.',
+    structLow: 'Цвет розе бледный, красное пустое — по структуре сезон не состоялся.',
+  },
 };
 
 // Дегустационная заметка из уровней метрик
@@ -126,7 +135,15 @@ function tastingNote(scenario: SimScenario, m: Metrics, faults: string[]): strin
   return notes;
 }
 
-function ScenarioPicker({ onPick, best }: { onPick: (s: SimScenario) => void; best: Record<string, number> }) {
+function ScenarioPicker({
+  onPick,
+  best,
+  onOpenReference,
+}: {
+  onPick: (s: SimScenario) => void;
+  best: Record<string, number>;
+  onOpenReference: () => void;
+}) {
   return (
     <div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -160,6 +177,23 @@ function ScenarioPicker({ onPick, best }: { onPick: (s: SimScenario) => void; be
             </div>
           </button>
         ))}
+      </div>
+
+      <div className="mt-6 rounded-xl border border-stone-200 dark:border-stone-800 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium text-stone-800 dark:text-stone-200">Справочник препаратов сезона</div>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Дрожжи, активаторы, ферменты, метабисульфит и дубовая щепа — дозы, момент внесения и несовместимости.
+          </p>
+        </div>
+        <button
+          onClick={onOpenReference}
+          className="text-sm font-semibold px-4 py-2 rounded-lg border border-emerald-300 dark:border-emerald-700
+            text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
+        >
+          📋 Открыть справочник
+        </button>
       </div>
     </div>
   );
@@ -197,6 +231,8 @@ export default function WineSimulator() {
   const [chosen, setChosen] = useState<SimChoice | null>(null);
   const [done, setDone] = useState(false);
   const [best, setBest] = useState<Record<string, number>>({});
+  /** null — диалог закрыт; { id: null } — общий справочник; { id } — карточка препарата. */
+  const [reagentDialog, setReagentDialog] = useState<{ id: string | null } | null>(null);
 
   useEffect(() => {
     try {
@@ -267,7 +303,12 @@ export default function WineSimulator() {
 
   // ── Экран выбора сценария ──
   if (!scenario) {
-    return <ScenarioPicker onPick={start} best={best} />;
+    return (
+      <>
+        <ScenarioPicker onPick={start} best={best} onOpenReference={() => setReagentDialog({ id: null })} />
+        {reagentDialog && <ReagentDialog initialId={reagentDialog.id} onClose={() => setReagentDialog(null)} />}
+      </>
+    );
   }
 
   const score = Math.round(
@@ -382,6 +423,12 @@ export default function WineSimulator() {
             </div>
           )}
 
+          {stage.reagents && stage.reagents.length > 0 && (
+            <div className="mb-4">
+              <ReagentChips ids={stage.reagents} onOpen={(id) => setReagentDialog({ id })} />
+            </div>
+          )}
+
           <div className="text-sm font-semibold text-stone-800 dark:text-stone-200 mb-3">{stage.question}</div>
 
           <div className="space-y-2.5">
@@ -433,6 +480,11 @@ export default function WineSimulator() {
                   );
                 })}
               </div>
+              {chosen.reagents && chosen.reagents.length > 0 && (
+                <div className="mb-3">
+                  <ReagentChips ids={chosen.reagents} label="Подробнее" onOpen={(id) => setReagentDialog({ id })} />
+                </div>
+              )}
               <button onClick={next} className="bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2 rounded-lg font-semibold text-sm transition-colors">
                 {stageIndex + 1 >= scenario.stages.length ? 'Завершить и оценить вино →' : 'Далее →'}
               </button>
@@ -456,11 +508,21 @@ export default function WineSimulator() {
               </ul>
             </div>
           )}
-          <button onClick={reset} className="mt-4 text-xs text-stone-400 hover:text-red-500 transition-colors">
+          <button
+            onClick={() => setReagentDialog({ id: null })}
+            className="mt-4 w-full text-xs font-medium px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700
+              text-stone-600 dark:text-stone-300 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-400
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
+          >
+            📋 Справочник препаратов
+          </button>
+          <button onClick={reset} className="mt-3 text-xs text-stone-400 hover:text-red-500 transition-colors">
             ← Выйти к выбору сценария
           </button>
         </div>
       </aside>
+
+      {reagentDialog && <ReagentDialog initialId={reagentDialog.id} onClose={() => setReagentDialog(null)} />}
     </div>
   );
 }
