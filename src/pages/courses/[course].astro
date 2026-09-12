@@ -4,6 +4,9 @@ import ModuleProgressBar from '../../components/course/ModuleProgressBar.astro';
 import { getCollection } from 'astro:content';
 import { courses, getCourseById } from '../../data/courses';
 import { getModulesByCourse } from '../../data/modules';
+import { STAGES, checkpointAfter } from '../../data/process';
+import CheckpointCard from '../../components/course/CheckpointCard.astro';
+import { lessonsLabel } from '../../lib/plural';
 
 export async function getStaticPaths() {
   const allLessons = await getCollection('lessons');
@@ -26,6 +29,15 @@ export async function getStaticPaths() {
 
 const { course, courseModules, lessonsByModule, lessonIds } = Astro.props;
 const base = import.meta.env.BASE_URL;
+
+// Практикум идёт производственной цепочкой: модули сгруппированы по стадиям,
+// между операциями встают контрольные точки. Остальные курсы — плоским списком.
+const hasStages = courseModules.some((m) => m.stage);
+const groupedStages = hasStages
+  ? STAGES
+      .map((st) => ({ stage: st, mods: courseModules.filter((m) => m.stage === st.id) }))
+      .filter((g) => g.mods.length > 0)
+  : [];
 
 const totalLessons = lessonIds.length;
 const totalMinutes = courseModules
@@ -81,7 +93,7 @@ const firstHref = firstLesson
       <div class="h-2.5 bg-stone-200 dark:bg-stone-700 rounded-full overflow-hidden">
         <div id="course-progress-bar" class={`h-full ${course.accent.bg} rounded-full transition-all duration-500`} style="width:0%"></div>
       </div>
-      <div class="text-xs text-stone-400 mt-2" id="progress-label">0 / {totalLessons} уроков</div>
+      <div class="text-xs text-stone-400 mt-2" id="progress-label">0 / {lessonsLabel(totalLessons)}</div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -125,9 +137,66 @@ const firstHref = firstLesson
 
       <!-- Right: program -->
       <div class="lg:col-span-2">
-        <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200 mb-4">Программа курса</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Программа курса</h2>
+          {hasStages && (
+            <a href={`${base}process`} class={`text-sm font-medium hover:underline ${course.accent.text}`}>
+              Навигатор по цепочке →
+            </a>
+          )}
+        </div>
+
+        {hasStages && (
+          <p class="text-sm text-stone-500 dark:text-stone-400 mb-5">
+            Модули идут в том порядке, в каком операции выполняются на производстве. Между ними —
+            контрольные точки: что должно сойтись, прежде чем переходить дальше, и какие развилки возможны.
+          </p>
+        )}
+
         <div class="space-y-3">
-          {courseModules.map((mod) => {
+          {hasStages ? groupedStages.map((group) => (
+            <div class="space-y-3">
+              <div class="flex items-baseline gap-2.5 pt-4 first:pt-0">
+                <span class="text-lg" aria-hidden="true">{group.stage.icon}</span>
+                <div>
+                  <h3 class="font-bold text-stone-800 dark:text-stone-200">{group.stage.title}</h3>
+                  <p class="text-xs text-stone-500 dark:text-stone-400">{group.stage.subtitle}</p>
+                </div>
+              </div>
+
+              {group.mods.map((mod) => {
+                const lessons = lessonsByModule.get(mod.id) || [];
+                const t = lessons.reduce((s, l) => s + l.data.durationMin, 0);
+                const cp = checkpointAfter(mod.id);
+                return (
+                  <>
+                    <div class={`card transition-all ${course.accent.borderHover}`}>
+                      <div class="flex items-start gap-4">
+                        <span class="text-2xl mt-0.5">{mod.icon}</span>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex flex-wrap items-start justify-between gap-2 mb-1">
+                            <div>
+                              <span class="text-xs text-stone-400 dark:text-stone-500">Операция {mod.order}</span>
+                              <h4 class="font-semibold text-stone-800 dark:text-stone-200">
+                                <a href={`${base}course/${mod.id}`} class={`hover:underline ${course.accent.text}`}>{mod.title}</a>
+                              </h4>
+                            </div>
+                            <div class="text-right text-xs text-stone-400 dark:text-stone-500">
+                              <div>{lessonsLabel(lessons.length)}</div>
+                              <div>≈{t} мин</div>
+                            </div>
+                          </div>
+                          <p class="text-sm text-stone-500 dark:text-stone-400 mb-3">{mod.description}</p>
+                          <ModuleProgressBar moduleId={mod.id} />
+                        </div>
+                      </div>
+                    </div>
+                    {cp && <CheckpointCard checkpoint={cp} />}
+                  </>
+                );
+              })}
+            </div>
+          )) : courseModules.map((mod) => {
             const lessons = lessonsByModule.get(mod.id) || [];
             const t = lessons.reduce((s, l) => s + l.data.durationMin, 0);
             return (
@@ -143,7 +212,7 @@ const firstHref = firstLesson
                         </h3>
                       </div>
                       <div class="text-right text-xs text-stone-400 dark:text-stone-500">
-                        <div>{lessons.length} уроков</div>
+                        <div>{lessonsLabel(lessons.length)}</div>
                         <div>≈{t} мин</div>
                       </div>
                     </div>
