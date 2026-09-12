@@ -10,7 +10,7 @@ import {
 } from '../../data/simulation';
 import { ReagentChips, ReagentDialog } from './ReagentInfo';
 
-const BASE_URL = '/Testing-LO/';
+const BASE_URL = import.meta.env.BASE_URL;
 
 type Metrics = Record<MetricKey, number>;
 
@@ -231,6 +231,8 @@ export default function WineSimulator() {
   const [chosen, setChosen] = useState<SimChoice | null>(null);
   const [done, setDone] = useState(false);
   const [best, setBest] = useState<Record<string, number>>({});
+  /** Рекорд именно этого прохождения: повтор прежнего результата рекордом не считается. */
+  const [isRecord, setIsRecord] = useState(false);
   /** null — диалог закрыт; { id: null } — общий справочник; { id } — карточка препарата. */
   const [reagentDialog, setReagentDialog] = useState<{ id: string | null } | null>(null);
 
@@ -249,6 +251,7 @@ export default function WineSimulator() {
     setLog([]);
     setChosen(null);
     setDone(false);
+    setIsRecord(false);
   }
 
   function choose(choice: SimChoice) {
@@ -282,17 +285,16 @@ export default function WineSimulator() {
     const score = Math.round(
       (metrics.aroma + metrics.freshness + metrics.structure + metrics.stability + metrics.purity) / 5
     );
-    setBest((prev) => {
-      const cur = prev[scenario!.id];
-      if (cur == null || score > cur) {
-        const updated = { ...prev, [scenario!.id]: score };
-        try {
-          localStorage.setItem('sim-best', JSON.stringify(updated));
-        } catch {}
-        return updated;
-      }
-      return prev;
-    });
+    const cur = best[scenario!.id];
+    const beatsBest = cur == null || score > cur;
+    setIsRecord(beatsBest);
+    if (beatsBest) {
+      const updated = { ...best, [scenario!.id]: score };
+      setBest(updated);
+      try {
+        localStorage.setItem('sim-best', JSON.stringify(updated));
+      } catch {}
+    }
   }
 
   function reset() {
@@ -306,7 +308,13 @@ export default function WineSimulator() {
     return (
       <>
         <ScenarioPicker onPick={start} best={best} onOpenReference={() => setReagentDialog({ id: null })} />
-        {reagentDialog && <ReagentDialog initialId={reagentDialog.id} onClose={() => setReagentDialog(null)} />}
+        {reagentDialog && (
+          <ReagentDialog
+            key={reagentDialog.id ?? '__list__'}
+            initialId={reagentDialog.id}
+            onClose={() => setReagentDialog(null)}
+          />
+        )}
       </>
     );
   }
@@ -327,7 +335,7 @@ export default function WineSimulator() {
           <div className="text-5xl font-bold my-1 tabular-nums">{score}<span className="text-2xl text-white/60"> / 100</span></div>
           <div className="text-2xl font-semibold">{medal.label}</div>
           <p className="text-white/80 mt-2 max-w-md mx-auto text-sm">{medal.blurb}</p>
-          {best[scenario.id] === score && score > 0 && (
+          {isRecord && score > 0 && (
             <div className="mt-3 inline-block text-xs px-3 py-1 rounded-full bg-white/15">Новый личный рекорд!</div>
           )}
         </div>
@@ -522,7 +530,13 @@ export default function WineSimulator() {
         </div>
       </aside>
 
-      {reagentDialog && <ReagentDialog initialId={reagentDialog.id} onClose={() => setReagentDialog(null)} />}
+      {reagentDialog && (
+        <ReagentDialog
+          key={reagentDialog.id ?? '__list__'}
+          initialId={reagentDialog.id}
+          onClose={() => setReagentDialog(null)}
+        />
+      )}
     </div>
   );
 }

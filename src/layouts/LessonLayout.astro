@@ -109,7 +109,7 @@ const moduleCardCount = flashcards.filter(f => f.moduleId === lesson.data.module
         <!-- Key Points, Mnemonic, Self-Check -->
         {lesson.data.keyPoints && lesson.data.keyPoints.length > 0 && (
           <KeyPoints
-            client:load
+            client:visible
             points={lesson.data.keyPoints}
             mnemonic={lesson.data.mnemonic}
             selfCheck={lesson.data.selfCheck}
@@ -131,7 +131,7 @@ const moduleCardCount = flashcards.filter(f => f.moduleId === lesson.data.module
         )}
 
         <!-- Notes -->
-        <LessonNotes client:load lessonId={lesson.id} />
+        <LessonNotes client:visible lessonId={lesson.id} />
 
         <LessonProgress lessonId={lesson.id} />
 

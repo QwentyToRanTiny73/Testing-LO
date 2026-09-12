@@ -1,0 +1,170 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CheckpointCard from '../components/course/CheckpointCard.astro';
+import { getCollection } from 'astro:content';
+import { getModulesByCourse } from '../data/modules';
+import { COURSE_PRAKTIKUM } from '../data/courses';
+import { STAGES, DEFECT_INDEX, checkpointAfter } from '../data/process';
+import { lessonsLabel } from '../lib/plural';
+
+const base = import.meta.env.BASE_URL;
+
+const allLessons = await getCollection('lessons');
+const mods = getModulesByCourse(COURSE_PRAKTIKUM);
+
+const lessonCount = new Map<string, number>();
+for (const m of mods) lessonCount.set(m.id, 0);
+for (const l of allLessons) {
+  if (lessonCount.has(l.data.module)) lessonCount.set(l.data.module, lessonCount.get(l.data.module)! + 1);
+}
+
+const groups = STAGES
+  .map((st) => ({ stage: st, mods: mods.filter((m) => m.stage === st.id) }))
+  .filter((g) => g.mods.length > 0);
+
+const REVERSIBLE: Record<string, { label: string; cls: string }> = {
+  yes: { label: 'поправимо', cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' },
+  partly: { label: 'частично', cls: 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' },
+  no: { label: 'необратимо', cls: 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300' },
+};
+---
+
+<BaseLayout
+  title="Навигатор по технологической цепочке"
+  description="Карта производства от приёмки винограда до розлива: операции по порядку, контрольные точки между ними и указатель дефектов по симптому"
+>
+  <section class="bg-gradient-to-br from-wine-900 via-wine-800 to-oak-900 text-white py-12 px-4">
+    <div class="max-w-5xl mx-auto">
+      <nav class="flex items-center gap-2 text-sm text-white/70 mb-5">
+        <a href={base} class="hover:text-white">Главная</a>
+        <span>/</span>
+        <span class="text-white">Навигатор</span>
+      </nav>
+      <h1 class="text-3xl sm:text-4xl font-bold">От приёмки до розлива</h1>
+      <p class="text-lg text-white/80 mt-2 max-w-3xl">
+        Операции в том порядке, в каком они идут на производстве. Между ними — контрольные точки:
+        что должно сойтись перед переходом дальше и что делать, если не сошлось.
+      </p>
+    </div>
+  </section>
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <!-- Мини-карта стадий -->
+    <nav aria-label="Стадии производства" class="flex flex-wrap items-center gap-x-1.5 gap-y-2 mb-10 pb-6 border-b border-stone-200 dark:border-stone-800">
+      {groups.map((g, i) => (
+        <>
+          <a
+            href={`#${g.stage.id}`}
+            class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400 hover:text-wine-700 dark:hover:text-wine-400 transition-colors"
+          >
+            <span aria-hidden="true">{g.stage.icon}</span>
+            {g.stage.title.replace(/^Стадия \d+\. /, '')}
+          </a>
+          {i < groups.length - 1 && <span class="text-stone-300 dark:text-stone-600" aria-hidden="true">→</span>}
+        </>
+      ))}
+      <a href="#defekty-index" class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:border-amber-500 transition-colors ml-auto">
+        ⚠️ Дефект по симптому
+      </a>
+    </nav>
+
+    <!-- Цепочка -->
+    <div class="space-y-10">
+      {groups.map((g) => (
+        <section id={g.stage.id} class="scroll-mt-20">
+          <div class="flex items-baseline gap-3 mb-4">
+            <span class="text-2xl" aria-hidden="true">{g.stage.icon}</span>
+            <div>
+              <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">{g.stage.title}</h2>
+              <p class="text-sm text-stone-500 dark:text-stone-400">{g.stage.subtitle}</p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            {g.mods.map((m) => {
+              const cp = checkpointAfter(m.id);
+              return (
+                <>
+                  <a
+                    href={`${base}course/${m.id}`}
+                    class="flex items-start gap-3 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 hover:border-wine-300 dark:hover:border-wine-700 transition-colors"
+                  >
+                    <span class="text-xl mt-0.5" aria-hidden="true">{m.icon}</span>
+                    <span class="flex-1 min-w-0">
+                      <span class="flex flex-wrap items-baseline justify-between gap-2">
+                        <span class="font-semibold text-stone-800 dark:text-stone-200">
+                          <span class="text-stone-400 dark:text-stone-500 font-normal text-sm">{m.order}.</span> {m.title}
+                        </span>
+                        <span class="text-xs text-stone-400 dark:text-stone-500">{lessonsLabel(lessonCount.get(m.id) || 0)}</span>
+                      </span>
+                      <span class="block text-sm text-stone-500 dark:text-stone-400 mt-0.5">{m.description}</span>
+                    </span>
+                  </a>
+                  {cp && <CheckpointCard checkpoint={cp} variant="full" />}
+                </>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+
+    <!-- Указатель дефектов -->
+    <section id="defekty-index" class="mt-14 scroll-mt-20">
+      <div class="flex items-baseline gap-3 mb-2">
+        <span class="text-2xl" aria-hidden="true">⚠️</span>
+        <h2 class="text-xl font-bold text-stone-800 dark:text-stone-200">Дефект по симптому</h2>
+      </div>
+      <p class="text-sm text-stone-500 dark:text-stone-400 mb-5 max-w-3xl">
+        Вход с той стороны, с какой дефект обычно и обнаруживают — по запаху или виду в бокале.
+        Столбец «обратимость» показывает, есть ли ещё смысл вмешиваться или остаётся только профилактика на будущее.
+      </p>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-stone-300 dark:border-stone-700">
+              <th class="text-left py-2 pr-3 font-semibold text-stone-600 dark:text-stone-400">Симптом</th>
+              <th class="text-left py-2 px-3 font-semibold text-stone-600 dark:text-stone-400">Вероятная причина</th>
+              <th class="text-left py-2 px-3 font-semibold text-stone-600 dark:text-stone-400">Первое действие</th>
+              <th class="text-left py-2 pl-3 font-semibold text-stone-600 dark:text-stone-400 whitespace-nowrap">Обратимость</th>
+            </tr>
+          </thead>
+          <tbody>
+            {DEFECT_INDEX.map((d) => {
+              const r = REVERSIBLE[d.reversible];
+              return (
+                <tr class="border-b border-stone-100 dark:border-stone-800 align-top">
+                  <td class="py-3 pr-3 font-medium text-stone-800 dark:text-stone-200">{d.symptom}</td>
+                  <td class="py-3 px-3 text-stone-600 dark:text-stone-400">{d.cause}</td>
+                  <td class="py-3 px-3 text-stone-600 dark:text-stone-400">
+                    {d.action}
+                    <a href={`${base}course/${d.module}`} class="block mt-1 text-xs text-wine-700 dark:text-wine-400 hover:underline">
+                      Разбор механизма →
+                    </a>
+                  </td>
+                  <td class="py-3 pl-3">
+                    <span class={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${r.cls}`}>{r.label}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="mt-10 rounded-xl border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-amber-800 dark:text-amber-200">
+      <strong>Важно:</strong> все пороги и дозы на этой странице — ориентиры, требующие калибровки под
+      конкретное сырьё, оборудование и регламент предприятия. Предельные концентрации сверяйте
+      по действующему нормативу.
+    </div>
+
+    <div class="mt-8 flex flex-wrap gap-3 text-sm">
+      <a href={`${base}courses/${COURSE_PRAKTIKUM}`} class="btn-secondary">К программе практикума</a>
+      <a href={`${base}tools`} class="btn-secondary">Калькуляторы</a>
+      <a href={`${base}simulator`} class="btn-secondary">Симулятор</a>
+      <a href={`${base}glossary`} class="btn-secondary">Глоссарий</a>
+    </div>
+  </div>
+</BaseLayout>

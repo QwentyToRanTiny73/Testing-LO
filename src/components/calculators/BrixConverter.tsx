@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { num } from './num';
 
-// Brix to density: rho ≈ 1 + Brix * 0.004 (orientation, simplified)
-// Oechsle = (density - 1) * 1000
-// Potential alcohol (% vol) ≈ Brix * 0.575 (orientation, varies)
-// Temperature correction for hydrometer calibrated at 20°C: ~0.0007 Brix/°C (very simplified)
+// Пересчёт шкал сахаристости.
+// Brix → плотность: стандартная аппроксимация, пригодная в диапазоне 0–30 °Brix.
+// Oechsle = (плотность − 1) × 1000.
+// Потенциальный спирт ≈ Brix × 0,575 (ориентир; принятая вилка 0,55–0,60).
+// Температурная поправка ареометра, калиброванного на 20 °C: ~0,07 °Brix на °C
+// (истинное значение 0,05–0,1 в зависимости от температуры и плотности).
+
+const TEMP_CORR_PER_C = 0.07;
 
 function brixToDensity(brix: number) {
-  return 1 + brix * 0.004;
+  return 1 + brix / (258.6 - (brix / 258.2) * 227.1);
 }
 function brixToOechsle(brix: number) {
   return Math.round((brixToDensity(brix) - 1) * 1000);
@@ -14,39 +19,38 @@ function brixToOechsle(brix: number) {
 function brixToAlcohol(brix: number) {
   return brix * 0.575;
 }
-function oechsleToBrix(oe: number) {
-  return oe / 4;
-}
-function densityToBrix(d: number) {
-  return (d - 1) / 0.004;
-}
 
 export default function BrixConverter() {
   const [brix, setBrix] = useState('22');
   const [measTemp, setMeasTemp] = useState('20');
-  const [calTemp] = useState(20);
+  const calTemp = 20;
+  const uid = useId();
 
-  const brixN = parseFloat(brix) || 0;
-  const measTempN = parseFloat(measTemp) || 0;
-  const tempCorrBrix = brixN + (measTempN - calTemp) * 0.0007;
+  const brixN = num(brix);
+  // Пустое поле температуры = температура калибровки, то есть поправка нулевая.
+  const measTempN = num(measTemp, calTemp);
+  const tempCorrBrix = brixN + (measTempN - calTemp) * TEMP_CORR_PER_C;
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="label">Brix (рефрактометр)</label>
-          <input type="number" className="input" value={brix} step={0.1}
+          <label className="label" htmlFor={`${uid}-brix`}>Сахаристость (°Brix)</label>
+          <input id={`${uid}-brix`} type="number" className="input" value={brix} step={0.1}
             onChange={e => setBrix(e.target.value)} />
         </div>
         <div>
-          <label className="label">Температура измерения (°C)</label>
-          <input type="number" className="input" value={measTemp} step={0.5}
+          <label className="label" htmlFor={`${uid}-temp`}>Температура измерения (°C)</label>
+          <input id={`${uid}-temp`} type="number" className="input" value={measTemp} step={0.5}
             onChange={e => setMeasTemp(e.target.value)} />
-          <p className="text-xs text-stone-400 mt-1">Ареометр откалиброван при 20°C</p>
+          <p className="text-xs text-stone-400 mt-1">
+            Поправка для ареометра, калиброванного при 20 °C. Рефрактометры с автоматической
+            термокомпенсацией (ATC) поправки не требуют — оставьте 20 °C.
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" aria-live="polite">
         {[
           { label: 'Brix (скорр.)', value: tempCorrBrix.toFixed(1) },
           { label: 'Oechsle', value: brixToOechsle(tempCorrBrix).toFixed(0) },
@@ -59,7 +63,11 @@ export default function BrixConverter() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-stone-400">Коэффициенты — упрощённые ориентиры. Для точных пересчётов используйте поверенные таблицы ОИВ.</p>
+      <p className="text-xs text-stone-400">
+        Коэффициенты — ориентиры. Потенциальный спирт здесь считается по Brix × 0,575; калькулятор
+        коррекции сахара использует другую договорённость (0,0595 % об. на г/л), поэтому значения
+        могут расходиться на несколько десятых. Для точных пересчётов используйте поверенные таблицы ОИВ.
+      </p>
     </div>
   );
 }

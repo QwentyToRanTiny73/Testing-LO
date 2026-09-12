@@ -1,4 +1,5 @@
 ---
+import { lessonsLabel } from '../../lib/plural';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { courses } from '../../data/courses';
@@ -71,7 +72,7 @@ const methodology = [
                   : (
                     <>
                       <span class={`px-2 py-1 rounded-md ${course.accent.soft} ${course.accent.text} font-medium`}>{s.modules} модулей</span>
-                      <span class="px-2 py-1 rounded-md bg-stone-100 dark:bg-stone-800">{s.lessons} уроков</span>
+                      <span class="px-2 py-1 rounded-md bg-stone-100 dark:bg-stone-800">{lessonsLabel(s.lessons)}</span>
                       <span class="px-2 py-1 rounded-md bg-stone-100 dark:bg-stone-800">≈{Math.round(s.minutes / 60)} ч материала</span>
                     </>
                   )}
