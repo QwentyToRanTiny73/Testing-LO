@@ -1,6 +1,6 @@
 import type { MindNode } from '../components/learning/MindMap';
 
-const BASE = '/Testing-LO/';
+const BASE = import.meta.env.BASE_URL;
 
 export const mindMaps: Record<string, MindNode> = {
   'so2': {

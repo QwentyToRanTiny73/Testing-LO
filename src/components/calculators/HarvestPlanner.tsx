@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { HarvestLot, HarvestStage } from '../../data/harvest2026';
 
-const BASE_URL = '/Testing-LO/';
+const BASE_URL = import.meta.env.BASE_URL;
 
 const TOOL_LINKS: Record<string, { label: string; href: string }> = {
   maceration: { label: '→ Калькулятор мацерации', href: `${BASE_URL}tools#maceration` },

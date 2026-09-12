@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { num } from './num';
 
 const DISCLAIMER = 'Ориентир, не норматив — все значения требуют калибровки под конкретный сорт, год, технологическое оборудование и регламент предприятия.';
 
@@ -43,11 +44,11 @@ const methodNotes: Record<Method, string> = {
 };
 
 export default function MacerationCalc() {
+  const uid = useId();
   const [variety, setVariety] = useState('Каберне Совиньон');
   const [style, setStyle] = useState<Style>('medium');
   const [temp, setTemp] = useState('18');
   const [method, setMethod] = useState<Method>('remontage');
-  const [result, setResult] = useState<MacData | null>(null);
 
   const varieties = Object.keys(macTable);
   const styles: { value: Style; label: string }[] = [
@@ -63,41 +64,42 @@ export default function MacerationCalc() {
     { value: 'batonnage', label: 'Батонаж' },
   ];
 
-  function calculate() {
-    const base = macTable[variety]?.[style];
-    if (!base) return;
-    const tempN = parseFloat(temp) || 18;
-    // Cellar temp correction: warmer cellar → higher must temp → slightly shorter maceration
-    let tempAdj = 0;
-    if (tempN > 22) tempAdj = -1;
-    if (tempN > 25) tempAdj = -2;
-    if (tempN < 14) tempAdj = 1;
-
-    setResult({
-      minDays: Math.max(1, base.minDays + tempAdj),
-      maxDays: Math.max(2, base.maxDays + tempAdj),
-      notes: base.notes,
-    });
-  }
+  // Считаем при рендере, иначе диапазон дней остаётся от прошлого нажатия
+  // рядом с уже изменённой температурой в подписи.
+  const base = macTable[variety]?.[style];
+  const tempN = num(temp, 18);
+  // Поправка по температуре помещения: теплее — мацерация чуть короче.
+  let tempAdj = 0;
+  if (tempN > 22) tempAdj = -1;
+  if (tempN > 25) tempAdj = -2;
+  if (tempN < 14) tempAdj = 1;
+  const result: MacData | null = base
+    ? {
+        minDays: Math.max(1, base.minDays + tempAdj),
+        maxDays: Math.max(2, base.maxDays + tempAdj),
+        notes: base.notes,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="label">Сорт винограда</label>
-          <select className="select" value={variety} onChange={e => setVariety(e.target.value)}>
+          <label className="label" htmlFor={`${uid}-variety`}>Сорт винограда</label>
+          <select id={`${uid}-variety`} className="select" value={variety} onChange={e => setVariety(e.target.value)}>
             {varieties.map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">Целевой стиль</label>
-          <select className="select" value={style} onChange={e => setStyle(e.target.value as Style)}>
+          <label className="label" htmlFor={`${uid}-style`}>Целевой стиль</label>
+          <select id={`${uid}-style`} className="select" value={style} onChange={e => setStyle(e.target.value as Style)}>
             {styles.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">Температура в погребе/помещении (°C) <span className="text-stone-400 text-xs">(ориентир: 14–22°C)</span></label>
+          <label className="label" htmlFor={`${uid}-temp`}>Температура в погребе/помещении (°C) <span className="text-stone-400 text-xs">(ориентир: 14–22°C)</span></label>
           <input
+            id={`${uid}-temp`}
             type="number"
             className="input"
             value={temp}
@@ -107,23 +109,21 @@ export default function MacerationCalc() {
           />
         </div>
         <div>
-          <label className="label">Способ работы с шапкой</label>
-          <select className="select" value={method} onChange={e => setMethod(e.target.value as Method)}>
+          <label className="label" htmlFor={`${uid}-method`}>Способ работы с мезгой и осадком</label>
+          <select id={`${uid}-method`} className="select" value={method} onChange={e => setMethod(e.target.value as Method)}>
             {methods.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
         </div>
       </div>
 
-      <button onClick={calculate} className="btn-primary">Рассчитать</button>
-
       {result && (
-        <div className="space-y-4">
+        <div className="space-y-4" aria-live="polite">
           <div className="rounded-xl bg-wine-50 dark:bg-wine-950/30 border border-wine-200 dark:border-wine-800 p-5">
             <div className="text-sm text-wine-700 dark:text-wine-400 font-medium mb-1">Рекомендованный диапазон мацерации</div>
             <div className="text-3xl font-bold text-wine-900 dark:text-wine-200">
               {result.minDays}–{result.maxDays} дней
             </div>
-            <div className="text-xs text-wine-600 dark:text-wine-400 mt-1">Ориентир с учётом температуры {temp}°C</div>
+            <div className="text-xs text-wine-600 dark:text-wine-400 mt-1">Ориентир с учётом температуры в помещении {temp}°C</div>
           </div>
 
           <div className="rounded-lg bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-4">
@@ -143,7 +143,8 @@ export default function MacerationCalc() {
           <div className="rounded-lg border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-amber-800 dark:text-amber-300">
             <strong>⚠️ {DISCLAIMER}</strong>
             <br />
-            Ориентируйтесь на регулярную дегустацию и аналитику, а не только на количество дней. Фенольная зрелость сырья, виноделен, год урожая — всё влияет на результат.
+            Ориентируйтесь на регулярную дегустацию и аналитику, а не только на количество дней. Фенольная зрелость сырья, винодельня, год урожая — всё влияет на результат.
+            Поправка по температуре помещения здесь мягкая и работает как подсказка: кинетику мацерации задаёт температура самой мезги, которая при активном брожении красных держится на 25–30 °C во многом независимо от того, насколько прохладен погреб.
           </div>
         </div>
       )}

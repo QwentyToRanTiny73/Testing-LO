@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { num } from './num';
 
 const DISCLAIMER = 'Ориентир. Пробная оклейка — лабораторный тест, результаты которого зависят от конкретного бентонита, состава вина и технологии применения. Всегда проводите пробную оклейку перед рабочей обработкой.';
 
@@ -14,8 +15,8 @@ export default function BentoniteCalc() {
     PRESET_DOSES.map(dose => ({ dose, heatStable: false }))
   );
   const [volume, setVolume] = useState('1000');
-  const [result, setResult] = useState<{ recDose: number; weightKg: number } | null>(null);
   const [customDose, setCustomDose] = useState('');
+  const uid = useId();
 
   function toggleStable(idx: number) {
     setTrials(t => t.map((tr, i) => i === idx ? { ...tr, heatStable: !tr.heatStable } : tr));
@@ -33,20 +34,13 @@ export default function BentoniteCalc() {
     setTrials(t => t.filter((_, i) => i !== idx));
   }
 
-  function calculate() {
-    const stable = trials.filter(t => t.heatStable);
-    if (stable.length === 0) {
-      setResult(null);
-      return;
-    }
-    // Recommended dose = lowest dose that passes heat test + safety margin
-    const minStable = Math.min(...stable.map(t => t.dose));
-    const recDose = minStable; // g/hL (apply directly; some prefer +10% margin)
-    const weightKg = (recDose * (parseFloat(volume) || 0)) / 100 / 1000; // g/hL × hL / 1000 → kg
-    setResult({ recDose, weightKg });
-  }
-
-  const stableCount = trials.filter(t => t.heatStable).length;
+  // Рабочая доза — наименьшая из прошедших тепловой тест. Выводится при рендере,
+  // иначе навеска остаётся от прошлого расчёта рядом с уже изменённым объёмом.
+  const stableDoses = trials.filter(t => t.heatStable).map(t => t.dose);
+  const stableCount = stableDoses.length;
+  const volumeN = num(volume);
+  const recDose = stableCount > 0 ? Math.min(...stableDoses) : null;
+  const weightKg = recDose === null ? 0 : (recDose * volumeN) / 100 / 1000; // г/гл × гл / 1000 → кг
 
   return (
     <div className="space-y-6">
@@ -55,15 +49,15 @@ export default function BentoniteCalc() {
         <ol className="list-decimal ml-4 mt-2 space-y-1 text-xs">
           <li>Приготовьте 5% суспензию бентонита (гидратация 24 ч).</li>
           <li>Отберите пробы вина 100 мл, внесите дозы из таблицы ниже.</li>
-          <li>Перемешайте, выдержите при комнатной температуре 30 мин, осветлите.</li>
-          <li>Прогрейте пробы при 80°C × 30 мин (ориентир), охладите, оцените прозрачность.</li>
+          <li>Перемешайте, дайте отстояться (ориентир — от нескольких часов до суток), осветлите.</li>
+          <li>Прогрейте пробы при 80 °C не менее 2 ч (референс AWRI — 6 ч), охладите, измерьте прирост мутности (порог — менее 2 NTU).</li>
           <li>Отметьте «стабильно» для доз, не давших помутнения.</li>
         </ol>
       </div>
 
       <div>
-        <label className="label">Объём вина (л)</label>
-        <input type="number" className="input max-w-xs" value={volume} min={1}
+        <label className="label" htmlFor={`${uid}-volume`}>Объём вина (л)</label>
+        <input id={`${uid}-volume`} type="number" className="input max-w-xs" value={volume} min={1}
           onChange={e => setVolume(e.target.value)} />
       </div>
 
@@ -107,8 +101,8 @@ export default function BentoniteCalc() {
       {/* Add custom dose */}
       <div className="flex gap-2 items-end">
         <div className="flex-1 max-w-xs">
-          <label className="label">Добавить дозу (г/гл)</label>
-          <input type="number" className="input" value={customDose} min={1}
+          <label className="label" htmlFor={`${uid}-custom`}>Добавить дозу (г/гл)</label>
+          <input id={`${uid}-custom`} type="number" className="input" value={customDose} min={1}
             onChange={e => setCustomDose(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCustomDose()}
           />
@@ -116,20 +110,21 @@ export default function BentoniteCalc() {
         <button onClick={addCustomDose} className="btn-secondary mb-0">Добавить</button>
       </div>
 
-      <button onClick={calculate} className="btn-primary" disabled={stableCount === 0}>
-        {stableCount === 0 ? 'Отметьте хотя бы одну стабильную дозу' : 'Рассчитать рабочую дозу'}
-      </button>
-
-      {result && (
+      <div className="space-y-4" aria-live="polite">
+        {recDose === null ? (
+          <div className="rounded-xl border border-dashed border-stone-300 dark:border-stone-700 p-4 text-sm text-stone-500 dark:text-stone-400">
+            Отметьте в таблице хотя бы одну дозу, прошедшую тепловой тест, — рабочая доза появится здесь.
+          </div>
+        ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl bg-wine-50 dark:bg-wine-950/30 border border-wine-200 dark:border-wine-800 p-4">
-              <div className="text-2xl font-bold text-wine-800 dark:text-wine-300">{result.recDose} г/гл</div>
+              <div className="text-2xl font-bold text-wine-800 dark:text-wine-300">{recDose} г/гл</div>
               <div className="text-xs text-wine-600 dark:text-wine-400 mt-1">Рекомендованная рабочая доза</div>
             </div>
             <div className="rounded-xl bg-wine-700 dark:bg-wine-800 p-4 text-center">
-              <div className="text-2xl font-bold text-white">{result.weightKg.toFixed(2)} кг</div>
-              <div className="text-xs text-wine-200 mt-1">Навеска на {volume} л</div>
+              <div className="text-2xl font-bold text-white">{weightKg.toFixed(2)} кг</div>
+              <div className="text-xs text-wine-200 mt-1">Навеска на {volumeN} л</div>
             </div>
           </div>
 
@@ -143,7 +138,8 @@ export default function BentoniteCalc() {
             <strong>⚠️ {DISCLAIMER}</strong>
           </div>
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

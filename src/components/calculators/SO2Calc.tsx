@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useId, useState, useMemo } from 'react';
+import { num } from './num';
 
 const DISCLAIMER =
   'Ориентир, не норматив. Реальная потребность зависит от состава вина (ацетальдегид, пируват, кетокислоты, сахара) и температуры. После внесения измерьте свободный SO₂ через 24–48 ч и при необходимости откорректируйте.';
@@ -33,6 +34,7 @@ const REAGENTS: Reagent[] = [
 type Mode = 'free' | 'molecular';
 
 export default function SO2Calc() {
+  const uid = useId();
   const [mode, setMode] = useState<Mode>('free');
   const [pH, setPH] = useState('3.4');
   const [volume, setVolume] = useState('100');
@@ -47,15 +49,15 @@ export default function SO2Calc() {
 
   const reagent = REAGENTS.find((r) => r.id === reagentId)!;
 
-  const pHP = parseFloat(pH) || 3.4;
-  const volumeN = parseFloat(volume) || 0;
-  const currentFreeN = parseFloat(currentFree) || 0;
-  const targetFreeN = parseFloat(targetFree) || 0;
-  const targetMolecularN = parseFloat(targetMolecular) || 0;
-  const purityN = parseFloat(purity) || 57.6;
-  const efficiencyN = parseFloat(efficiency) || 100;
-  const currentTotalN = parseFloat(currentTotal) || 0;
-  const maxTotalN = parseFloat(maxTotal) || 200;
+  const pHP = num(pH, 3.4);
+  const volumeN = num(volume);
+  const currentFreeN = num(currentFree);
+  const targetFreeN = num(targetFree);
+  const targetMolecularN = num(targetMolecular);
+  const purityN = num(purity, 57.6);
+  const efficiencyN = num(efficiency, 100);
+  const currentTotalN = num(currentTotal);
+  const maxTotalN = num(maxTotal, 200);
 
   function onReagentChange(id: string) {
     const r = REAGENTS.find((x) => x.id === id)!;
@@ -150,35 +152,35 @@ export default function SO2Calc() {
       {/* Основные входные данные */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="label">pH вина</label>
-          <input type="number" className="input" value={pH} min={2.8} max={4.5} step={0.01}
+          <label className="label" htmlFor={`${uid}-ph`}>pH вина</label>
+          <input id={`${uid}-ph`} type="number" className="input" value={pH} min={2.8} max={4.5} step={0.01}
             onChange={(e) => setPH(e.target.value)} />
           <p className="text-xs text-stone-400 mt-1">{molGuide}</p>
         </div>
         <div>
-          <label className="label">Объём вина (л)</label>
-          <input type="number" className="input" value={volume} min={1}
+          <label className="label" htmlFor={`${uid}-vol`}>Объём вина (л)</label>
+          <input id={`${uid}-vol`} type="number" className="input" value={volume} min={1}
             onChange={(e) => setVolume(e.target.value)} />
         </div>
         <div>
-          <label className="label">Текущий свободный SO₂ (мг/л)</label>
-          <input type="number" className="input" value={currentFree} min={0}
+          <label className="label" htmlFor={`${uid}-cur`}>Текущий свободный SO₂ (мг/л)</label>
+          <input id={`${uid}-cur`} type="number" className="input" value={currentFree} min={0}
             onChange={(e) => setCurrentFree(e.target.value)} />
           <p className="text-xs text-stone-400 mt-1">По анализу (метод Риппера / аспирация)</p>
         </div>
         {mode === 'free' ? (
           <div>
-            <label className="label">Целевой свободный SO₂ (мг/л)</label>
-            <input type="number" className="input" value={targetFree} min={0} step={1}
+            <label className="label" htmlFor={`${uid}-tfree`}>Целевой свободный SO₂ (мг/л)</label>
+            <input id={`${uid}-tfree`} type="number" className="input" value={targetFree} min={0} step={1}
               onChange={(e) => setTargetFree(e.target.value)} />
             <p className="text-xs text-stone-400 mt-1">При pH {pHP.toFixed(2)} это даст ≈ {r.molAtTarget.toFixed(2)} мг/л молекулярного</p>
           </div>
         ) : (
           <div>
-            <label className="label">Целевой молекулярный SO₂ (мг/л)</label>
-            <input type="number" className="input" value={targetMolecular} min={0.1} max={2.0} step={0.05}
+            <label className="label" htmlFor={`${uid}-tmol`}>Целевой молекулярный SO₂ (мг/л)</label>
+            <input id={`${uid}-tmol`} type="number" className="input" value={targetMolecular} min={0.1} max={2.0} step={0.05}
               onChange={(e) => setTargetMolecular(e.target.value)} />
-            <p className="text-xs text-stone-400 mt-1">Ориентир: сухие 0,5–0,8 · сладкие/риск Brett до ~1,5</p>
+            <p className="text-xs text-stone-400 mt-1">Ориентир: сухие 0,5–0,8 (этого же уровня достаточно против Brett) · сладкие — до ~1,5</p>
           </div>
         )}
       </div>
@@ -190,8 +192,8 @@ export default function SO2Calc() {
         </summary>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
           <div className="sm:col-span-2">
-            <label className="label">Форма внесения</label>
-            <select className="input" value={reagentId} onChange={(e) => onReagentChange(e.target.value)}>
+            <label className="label" htmlFor={`${uid}-reagent`}>Форма внесения</label>
+            <select id={`${uid}-reagent`} className="input" value={reagentId} onChange={(e) => onReagentChange(e.target.value)}>
               {REAGENTS.map((rg) => (
                 <option key={rg.id} value={rg.id}>{rg.name}</option>
               ))}
@@ -199,27 +201,27 @@ export default function SO2Calc() {
             {reagent.note && <p className="text-xs text-stone-400 mt-1">{reagent.note}</p>}
           </div>
           <div>
-            <label className="label">{reagent.phase === 'liquid' ? 'Концентрация (г SO₂ / 100 мл)' : 'Содержание SO₂ (%)'}</label>
-            <input type="number" className="input" value={purity} min={1} max={100} step={0.1}
+            <label className="label" htmlFor={`${uid}-purity`}>{reagent.phase === 'liquid' ? 'Концентрация (г SO₂ / 100 мл)' : 'Содержание SO₂ (%)'}</label>
+            <input id={`${uid}-purity`} type="number" className="input" value={purity} min={1} max={100} step={0.1}
               onChange={(e) => setPurity(e.target.value)} />
             <p className="text-xs text-stone-400 mt-1">Уточняйте по паспорту препарата</p>
           </div>
           <div>
-            <label className="label">Эффективность (% остаётся свободным)</label>
-            <input type="number" className="input" value={efficiency} min={1} max={100} step={1}
+            <label className="label" htmlFor={`${uid}-eff`}>Эффективность (% остаётся свободным)</label>
+            <input id={`${uid}-eff`} type="number" className="input" value={efficiency} min={1} max={100} step={1}
               onChange={(e) => setEfficiency(e.target.value)} />
             <p className="text-xs text-stone-400 mt-1">100 % — для стабильного вина; молодое/сусло связывает больше — снизьте</p>
           </div>
           <div>
-            <label className="label">Текущий общий SO₂ (мг/л)</label>
-            <input type="number" className="input" value={currentTotal} min={0}
+            <label className="label" htmlFor={`${uid}-ctot`}>Текущий общий SO₂ (мг/л)</label>
+            <input id={`${uid}-ctot`} type="number" className="input" value={currentTotal} min={0}
               onChange={(e) => setCurrentTotal(e.target.value)} />
           </div>
           <div>
-            <label className="label">Предел общего SO₂ (мг/л)</label>
-            <input type="number" className="input" value={maxTotal} min={0}
+            <label className="label" htmlFor={`${uid}-mtot`}>Предел общего SO₂ (мг/л)</label>
+            <input id={`${uid}-mtot`} type="number" className="input" value={maxTotal} min={0}
               onChange={(e) => setMaxTotal(e.target.value)} />
-            <p className="text-xs text-stone-400 mt-1">Ориентир; зависит от типа вина и норматива</p>
+            <p className="text-xs text-stone-400 mt-1">Ориентир: предел зависит от категории. По ЕС сухие белые и розовые — 200 мг/л, сухие красные — 150, сладкие — до 250–400. Сверяйте с действующим нормативом.</p>
           </div>
         </div>
       </details>
