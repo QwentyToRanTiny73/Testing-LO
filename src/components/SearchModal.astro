@@ -1,78 +1,302 @@
 ---
-const base = import.meta.env.BASE_URL;
+// Поиск по сайту на основном API Pagefind (pagefind.js — ES-модуль с search()).
+//
+// Раньше здесь грузился pagefind-ui.js через import(), но это обычный скрипт,
+// который кладёт PagefindUI в window и ничего не экспортирует: импорт отдавал
+// undefined, и поиск не работал ни в одной сборке. Теперь результаты рисуем
+// сами и привязываем к нашему полю ввода.
 ---
 
-<div id="search-modal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Поиск">
-  <!-- Backdrop -->
+<div
+  id="search-modal"
+  class="fixed inset-0 z-[100] hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="search-title"
+>
   <div id="search-backdrop" class="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"></div>
 
-  <!-- Panel -->
-  <div class="relative flex flex-col items-center justify-start pt-[10vh] px-4">
-    <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-stone-900 shadow-2xl overflow-hidden">
-      <div class="p-4 border-b border-stone-100 dark:border-stone-800 flex items-center gap-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <div class="relative flex flex-col items-center justify-start pt-[8vh] sm:pt-[10vh] px-3 sm:px-4">
+    <div id="search-panel" class="w-full max-w-2xl rounded-2xl bg-white dark:bg-stone-900 shadow-2xl overflow-hidden">
+      <h2 id="search-title" class="sr-only">Поиск по курсу</h2>
+      <div class="p-3 sm:p-4 border-b border-stone-100 dark:border-stone-800 flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-stone-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
           id="search-input"
-          type="text"
-          placeholder="Поиск по курсу..."
-          class="flex-1 bg-transparent outline-none text-stone-900 dark:text-stone-100 placeholder-stone-400 text-base"
+          type="search"
+          role="combobox"
+          aria-expanded="false"
+          aria-controls="search-list"
+          aria-autocomplete="list"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Термин, операция или симптом: «бентонит», «тухлые яйца»…"
+          class="flex-1 min-w-0 bg-transparent text-stone-900 dark:text-stone-100 placeholder-stone-400 text-base rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-wine-500"
         />
-        <button id="search-close" class="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 text-sm px-2">
+        <button
+          id="search-close"
+          type="button"
+          class="text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 text-xs px-2 py-1 rounded border border-stone-200 dark:border-stone-700"
+          aria-label="Закрыть поиск"
+        >
           Esc
         </button>
       </div>
-      <div id="search-results" class="max-h-[60vh] overflow-y-auto p-2">
-        <div id="pagefind-ui-container"></div>
+
+      <div class="max-h-[65vh] overflow-y-auto">
+        <p id="search-status" class="px-4 py-3 text-sm text-stone-500 dark:text-stone-400" aria-live="polite"></p>
+        <ul id="search-list" role="listbox" aria-label="Результаты поиска" class="pb-2"></ul>
+      </div>
+
+      <div class="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-stone-100 dark:border-stone-800 text-[11px] text-stone-400">
+        <span><kbd class="font-mono">↑</kbd> <kbd class="font-mono">↓</kbd> выбор</span>
+        <span><kbd class="font-mono">Enter</kbd> открыть</span>
+        <span><kbd class="font-mono">Esc</kbd> закрыть</span>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  const modal = document.getElementById('search-modal');
-  const backdrop = document.getElementById('search-backdrop');
-  const closeBtn = document.getElementById('search-close');
+  type PagefindResult = { id: string; data: () => Promise<PagefindData> };
+  type PagefindSub = { title: string; url: string; excerpt: string };
+  type PagefindData = {
+    url: string;
+    excerpt: string;
+    meta: { title?: string };
+    sub_results?: PagefindSub[];
+  };
+  type Pagefind = {
+    options: (o: Record<string, unknown>) => Promise<void>;
+    search: (q: string) => Promise<{ results: PagefindResult[] } | null>;
+  };
+
+  const BASE = import.meta.env.BASE_URL;
+  const SUGGEST = ['сульфитирование', 'бентонит', 'тухлые яйца', 'молекулярный SO₂', 'батонаж', 'ЯМБ'];
+
+  const modal = document.getElementById('search-modal')!;
+  const panel = document.getElementById('search-panel')!;
+  const backdrop = document.getElementById('search-backdrop')!;
+  const closeBtn = document.getElementById('search-close')!;
   const input = document.getElementById('search-input') as HTMLInputElement;
+  const list = document.getElementById('search-list')!;
+  const status = document.getElementById('search-status')!;
 
-  function openSearch() {
-    modal?.classList.remove('hidden');
-    setTimeout(() => input?.focus(), 50);
+  let pagefind: Pagefind | null = null;
+  let loadFailed = false;
+  let opener: HTMLElement | null = null;
+  let active = -1;
+  let seq = 0;
+  let timer: number | undefined;
+
+  function kindOf(url: string): string {
+    if (url.includes('/glossary')) return 'Глоссарий';
+    if (url.includes('/tools')) return 'Калькулятор';
+    if (url.includes('/process')) return 'Навигатор';
+    if (url.includes('/course/')) return 'Урок';
+    return 'Страница';
   }
 
-  function closeSearch() {
-    modal?.classList.add('hidden');
-    if (input) input.value = '';
-    const container = document.getElementById('pagefind-ui-container');
-    if (container) container.innerHTML = '';
+  function esc(s: string): string {
+    return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
   }
 
-  document.addEventListener('open-search', openSearch);
-  document.addEventListener('close-search', closeSearch);
-  backdrop?.addEventListener('click', closeSearch);
-  closeBtn?.addEventListener('click', closeSearch);
+  function setStatus(text: string) {
+    status.textContent = text;
+    status.hidden = !text;
+  }
 
-  // Pagefind integration
-  let pagefindLoaded = false;
-  async function loadPagefind() {
-    if (pagefindLoaded) return;
+  function showSuggestions() {
+    list.innerHTML = '';
+    active = -1;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    setStatus('');
+    const li = document.createElement('li');
+    li.className = 'px-4 pt-1 pb-3';
+    li.innerHTML =
+      '<div class="text-xs text-stone-400 mb-2">Попробуйте:</div><div class="flex flex-wrap gap-1.5">' +
+      SUGGEST.map(
+        (s) =>
+          `<button type="button" data-suggest="${esc(s)}" class="text-xs px-2.5 py-1 rounded-full border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-wine-400 hover:text-wine-700">${esc(s)}</button>`
+      ).join('') +
+      '</div>';
+    list.appendChild(li);
+  }
+
+  async function loadPagefind(): Promise<Pagefind | null> {
+    if (pagefind || loadFailed) return pagefind;
     try {
-      // @ts-ignore - pagefind is generated post-build, dynamic import at runtime
-      const pagefindPath = '/Testing-LO/pagefind/pagefind-ui.js';
-      // eslint-disable-next-line no-new-func
-      const { PagefindUI } = await (new Function('p', 'return import(p)'))(pagefindPath);
-      new PagefindUI({
-        element: '#pagefind-ui-container',
-        showImages: false,
-        resetStyles: false,
-      });
-      pagefindLoaded = true;
+      const url = `${BASE}pagefind/pagefind.js`;
+      const mod = (await import(/* @vite-ignore */ url)) as Pagefind;
+      await mod.options({ baseUrl: BASE, excerptLength: 22 });
+      pagefind = mod;
     } catch {
-      const container = document.getElementById('pagefind-ui-container');
-      if (container) container.innerHTML = '<p class="p-4 text-sm text-stone-500">Поиск недоступен в режиме разработки. Запустите `npm run build` для индексации.</p>';
+      loadFailed = true;
+    }
+    return pagefind;
+  }
+
+  function highlight(i: number) {
+    const items = list.querySelectorAll<HTMLElement>('[role="option"]');
+    items.forEach((el, idx) => {
+      const on = idx === i;
+      el.setAttribute('aria-selected', on ? 'true' : 'false');
+      el.classList.toggle('bg-wine-50', on);
+      el.classList.toggle('dark:bg-wine-950/40', on);
+    });
+    active = i;
+    if (i >= 0 && items[i]) {
+      input.setAttribute('aria-activedescendant', items[i].id);
+      items[i].scrollIntoView({ block: 'nearest' });
+    } else {
+      input.removeAttribute('aria-activedescendant');
     }
   }
 
-  document.addEventListener('open-search', loadPagefind);
+  function render(results: PagefindData[], q: string) {
+    list.innerHTML = '';
+    active = -1;
+    if (results.length === 0) {
+      setStatus(`По запросу «${q}» ничего не нашлось. Проверьте написание или попробуйте синоним.`);
+      input.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    setStatus(`Найдено: ${results.length}`);
+    input.setAttribute('aria-expanded', 'true');
+    results.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.id = `sr-${i}`;
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', 'false');
+      li.dataset.url = r.url;
+      li.className = 'mx-2 rounded-lg';
+      const subs = (r.sub_results || [])
+        .filter((s) => s.url !== r.url && s.title)
+        .slice(0, 2)
+        .map(
+          (s) =>
+            `<a href="${esc(s.url)}" class="block mt-1 pl-3 border-l-2 border-stone-200 dark:border-stone-700 text-xs text-stone-500 dark:text-stone-400 hover:text-wine-700 dark:hover:text-wine-400"><span class="text-stone-700 dark:text-stone-300">${esc(s.title)}</span></a>`
+        )
+        .join('');
+      li.innerHTML = `
+        <a href="${esc(r.url)}" class="block px-3 py-2.5 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800/60" tabindex="-1">
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="font-medium text-stone-800 dark:text-stone-100">${esc(r.meta.title || r.url)}</span>
+            <span class="text-[10px] uppercase tracking-wide text-stone-400 flex-shrink-0">${kindOf(r.url)}</span>
+          </div>
+          <div class="search-excerpt text-sm text-stone-500 dark:text-stone-400 mt-0.5 line-clamp-2">${r.excerpt}</div>
+        </a>${subs}`;
+      list.appendChild(li);
+    });
+  }
+
+  async function run(q: string) {
+    const my = ++seq;
+    if (!q.trim()) {
+      showSuggestions();
+      return;
+    }
+    const pf = await loadPagefind();
+    if (my !== seq) return;
+    if (!pf) {
+      list.innerHTML = '';
+      setStatus('Поиск работает в собранной версии сайта: индекс создаётся командой npm run build.');
+      return;
+    }
+    setStatus('Ищу…');
+    const res = await pf.search(q);
+    if (my !== seq || !res) return;
+    const data = await Promise.all(res.results.slice(0, 10).map((r) => r.data()));
+    if (my !== seq) return;
+    render(data, q);
+  }
+
+  function openSearch() {
+    if (!modal.classList.contains('hidden')) return;
+    opener = document.activeElement as HTMLElement | null;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    input.value = '';
+    showSuggestions();
+    setTimeout(() => input.focus(), 30);
+    void loadPagefind();
+  }
+
+  function closeSearch() {
+    if (modal.classList.contains('hidden')) return;
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+    seq++;
+    input.blur();
+    if (opener && opener !== document.body && document.contains(opener)) opener.focus();
+  }
+
+  input.addEventListener('input', () => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => run(input.value), 140);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const n = list.querySelectorAll('[role="option"]').length;
+    if (e.key === 'ArrowDown' && n) {
+      e.preventDefault();
+      highlight((active + 1) % n);
+    } else if (e.key === 'ArrowUp' && n) {
+      e.preventDefault();
+      highlight((active - 1 + n) % n);
+    } else if (e.key === 'Enter') {
+      const target = active >= 0 ? active : 0;
+      const el = list.querySelectorAll<HTMLElement>('[role="option"]')[target];
+      if (el?.dataset.url) {
+        e.preventDefault();
+        window.location.href = el.dataset.url;
+      }
+    }
+  });
+
+  list.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-suggest]');
+    if (btn) {
+      input.value = btn.dataset.suggest || '';
+      input.focus();
+      run(input.value);
+    }
+  });
+
+  // Ловушка фокуса внутри окна
+  panel.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const f = Array.from(panel.querySelectorAll<HTMLElement>('input, button, a[href]')).filter(
+      (el) => el.offsetParent !== null && el.tabIndex !== -1
+    );
+    if (!f.length) return;
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  document.addEventListener('open-search', openSearch);
+  document.addEventListener('close-search', closeSearch);
+  backdrop.addEventListener('click', closeSearch);
+  closeBtn.addEventListener('click', closeSearch);
 </script>
+
+<style is:global>
+  .search-excerpt mark {
+    background: transparent;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgb(184 50 73 / 0.5);
+    text-underline-offset: 2px;
+  }
+</style>
