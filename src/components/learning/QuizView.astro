@@ -1,0 +1,105 @@
+---
+// Тело страницы квиза. Используется общей страницей /quiz и страницами модулей
+// /quiz/<модуль>/. Майндкарта модуля показывается только на странице модуля —
+// раньше она зависела от ?module=, который на статике всегда пуст, и не
+// отображалась никогда.
+import ModuleQuiz from './ModuleQuiz';
+import MindMap from './MindMap';
+import { quizQuestions } from '../../data/quizzes';
+import { mindMaps } from '../../data/mindmaps';
+import { modules } from '../../data/modules';
+import { courses } from '../../data/courses';
+import { flashcards } from '../../data/flashcards';
+import { plural } from '../../lib/plural';
+
+interface Props {
+  moduleId?: string;
+}
+
+const { moduleId } = Astro.props as Props;
+const base = import.meta.env.BASE_URL;
+const activeModule = moduleId ? modules.find((m) => m.id === moduleId) : undefined;
+const mindMap = moduleId ? mindMaps[moduleId] : undefined;
+const hasCards = moduleId ? flashcards.some((c) => c.moduleId === moduleId) : true;
+
+const courseOrder = new Map(courses.map((c) => [c.id, c.order]));
+const counts = new Map<string, number>();
+for (const q of quizQuestions) counts.set(q.moduleId, (counts.get(q.moduleId) || 0) + 1);
+const chips = modules
+  .filter((m) => counts.has(m.id))
+  .sort((a, b) => (courseOrder.get(a.course) ?? 9) - (courseOrder.get(b.course) ?? 9) || a.order - b.order);
+
+const questions = moduleId ? quizQuestions.filter((q) => q.moduleId === moduleId) : quizQuestions;
+const chipBase = 'text-xs px-3 py-1.5 rounded-full border transition-colors';
+const chipOn = 'bg-wine-700 text-white border-wine-700';
+const chipOff = 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400';
+---
+
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+  <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6" aria-label="Хлебные крошки">
+    <a href={base} class="hover:text-wine-700">Главная</a>
+    <span aria-hidden="true">/</span>
+    {activeModule ? (
+      <>
+        <a href={`${base}quiz`} class="hover:text-wine-700">Квиз</a>
+        <span aria-hidden="true">/</span>
+        <span class="text-stone-700 dark:text-stone-300">{activeModule.title}</span>
+      </>
+    ) : (
+      <span class="text-stone-700 dark:text-stone-300">Квиз</span>
+    )}
+  </nav>
+
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">
+      ❓ {activeModule ? activeModule.title : 'Квиз'}
+    </h1>
+    <p class="text-stone-500 dark:text-stone-400">
+      Метод Сократа: вопросы с глубокими объяснениями и «Почему?» для развития понимания.
+    </p>
+  </div>
+
+  <nav class="flex flex-wrap gap-2 mb-6" aria-label="Квиз по модулям">
+    <a href={`${base}quiz`} class={`${chipBase} ${!moduleId ? chipOn : chipOff}`} aria-current={!moduleId ? 'page' : undefined}>
+      Все ({quizQuestions.length})
+    </a>
+    {chips.map((mod) => (
+      <a
+        href={`${base}quiz/${mod.id}`}
+        class={`${chipBase} ${moduleId === mod.id ? chipOn : chipOff}`}
+        aria-current={moduleId === mod.id ? 'page' : undefined}
+      >
+        {mod.icon} {mod.title.split(':')[0]} ({counts.get(mod.id)})
+      </a>
+    ))}
+  </nav>
+
+  {activeModule && (
+    <div class="rounded-lg bg-wine-50 dark:bg-wine-950/30 border border-wine-200 dark:border-wine-800 p-3 mb-6 text-sm text-wine-800 dark:text-wine-300 flex flex-wrap items-center justify-between gap-2">
+      <span>
+        {questions.length} {plural(questions.length, ['вопрос', 'вопроса', 'вопросов'])} по модулю
+      </span>
+      <a href={`${base}course/${activeModule.id}`} class="font-medium hover:underline">← К урокам модуля</a>
+    </div>
+  )}
+
+  {mindMap && (
+    <section class="mb-8" aria-labelledby="mindmap-title">
+      <h2 id="mindmap-title" class="text-lg font-semibold text-stone-800 dark:text-stone-200 mb-3">🗺 Майндкарта модуля</h2>
+      <MindMap client:visible root={mindMap} />
+    </section>
+  )}
+
+  <div class="card">
+    <ModuleQuiz client:load questions={questions} moduleId={moduleId} title={activeModule?.title} />
+  </div>
+
+  {hasCards && (
+    <div class="mt-6 text-center text-sm text-stone-500 dark:text-stone-400">
+      После квиза закрепите материал:
+      <a href={moduleId ? `${base}study/${moduleId}` : `${base}study`} class="text-wine-700 dark:text-wine-400 hover:underline ml-1">
+        → Флэш-карты
+      </a>
+    </div>
+  )}
+</div>

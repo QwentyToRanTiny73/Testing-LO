@@ -46,9 +46,12 @@ function getDueCards(cards: Flashcard[], sessions: Record<string, StudySession>)
 export default function FlashcardDeck({
   cards,
   moduleFilter,
+  moduleTitles = {},
 }: {
   cards: Flashcard[];
   moduleFilter?: string;
+  /** id модуля → название, чтобы карточка не показывала служебный идентификатор */
+  moduleTitles?: Record<string, string>;
 }) {
   const STORAGE_KEY = 'flashcard-sessions';
   const [sessions, setSessions] = useState<Record<string, StudySession>>({});
@@ -196,7 +199,7 @@ export default function FlashcardDeck({
             style={{ backfaceVisibility: 'hidden' }}
           >
             <div className="text-xs text-stone-400 dark:text-stone-500 uppercase tracking-wide mb-3">
-              {current.difficulty === 'easy' ? '🟢' : current.difficulty === 'medium' ? '🟡' : '🔴'} {current.moduleId}
+              {current.difficulty === 'easy' ? '🟢' : current.difficulty === 'medium' ? '🟡' : '🔴'} {moduleTitles[current.moduleId] ?? current.moduleId}
             </div>
             <p className="text-lg font-semibold text-stone-800 dark:text-stone-200">{current.front}</p>
             {current.hint && (

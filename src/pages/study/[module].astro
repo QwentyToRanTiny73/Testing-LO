@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import StudyView from '../../components/learning/StudyView.astro';
+import { flashcards } from '../../data/flashcards';
+import { getModuleById } from '../../data/modules';
+
+export function getStaticPaths() {
+  const ids = [...new Set(flashcards.map((c) => c.moduleId))];
+  return ids.filter((id) => getModuleById(id)).map((id) => ({ params: { module: id } }));
+}
+
+const { module: moduleId } = Astro.params;
+const mod = getModuleById(moduleId!)!;
+---
+
+<BaseLayout title={`Флэш-карты: ${mod.title}`} description={`Интервальное повторение по модулю «${mod.title}»`}>
+  <StudyView moduleId={moduleId} />
+</BaseLayout>

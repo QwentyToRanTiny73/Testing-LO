@@ -74,8 +74,8 @@ const firstHref = firstLesson
       </div>
       <p class="text-white/85 max-w-3xl mb-6">{course.description}</p>
       <div class="flex flex-wrap gap-3 items-center">
-        <a href={firstHref} class="inline-flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-xl font-semibold hover:bg-stone-100 transition-colors">
-          Начать обучение
+        <a href={firstHref} id="course-cta" data-course={course.id} class="inline-flex items-center gap-2 bg-white text-stone-900 px-6 py-3 rounded-xl font-semibold hover:bg-stone-100 transition-colors">
+          <span id="course-cta-label">Начать обучение</span>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
         </a>
         <span class="text-sm text-white/70">{courseModules.length} модулей · {totalLessons} уроков · ≈{Math.round(totalMinutes / 60)} ч</span>
@@ -228,6 +228,18 @@ const firstHref = firstLesson
     </div>
   </div>
 </BaseLayout>
+
+<script>
+  import { readLastLesson } from '../../lib/progress';
+  const cta = document.getElementById('course-cta');
+  const last = readLastLesson();
+  if (cta && last && last.courseId === cta.dataset.course) {
+    cta.setAttribute('href', last.href);
+    const label = document.getElementById('course-cta-label');
+    if (label) label.textContent = 'Продолжить: ' + last.title;
+    cta.setAttribute('title', last.title);
+  }
+</script>
 
 <script define:vars={{ lessonIds }}>
   function updateCourseProgress() {

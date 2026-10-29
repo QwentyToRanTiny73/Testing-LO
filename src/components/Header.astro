@@ -2,119 +2,241 @@
 const base = import.meta.env.BASE_URL;
 const currentPath = Astro.url.pathname;
 
-const navLinks = [
-  { href: `${base}`, label: 'Главная', exact: true },
+interface NavItem {
+  href: string;
+  label: string;
+  hint?: string;
+  icon?: string;
+  /** Префикс пути, при котором пункт считается активным */
+  match?: string;
+}
+interface NavGroup {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
+// Верхний уровень — то, с чего начинают; практика и справочник сгруппированы.
+// Раньше было 10 пунктов в одну строку: на ширине 768–1200 px шапка не
+// помещалась и страница прокручивалась вбок.
+const topLinks: NavItem[] = [
   { href: `${base}courses`, label: 'Курсы', match: `${base}course` },
-  { href: `${base}process`, label: '🧭 Навигатор' },
-  { href: `${base}simulator`, label: '🎮 Симулятор' },
-  { href: `${base}tools`, label: 'Инструменты' },
-  { href: `${base}study`, label: '🃏 Карточки' },
-  { href: `${base}quiz`, label: '❓ Квиз' },
-  { href: `${base}harvest`, label: 'Планировщик' },
-  { href: `${base}glossary`, label: 'Глоссарий' },
-  { href: `${base}about`, label: 'О проекте' },
+  { href: `${base}process`, label: 'Навигатор' },
 ];
 
-function isActive(href: string, exact = false, match?: string) {
-  if (exact) return currentPath === href || currentPath === href.replace(/\/$/, '');
-  const prefix = match ?? href;
+const groups: NavGroup[] = [
+  {
+    id: 'practice',
+    label: 'Практика',
+    items: [
+      { href: `${base}simulator`, label: 'Симулятор', icon: '🎮', hint: 'Решения от сбора урожая до розлива' },
+      { href: `${base}study`, label: 'Флэш-карты', icon: '🃏', hint: 'Интервальное повторение по модулям' },
+      { href: `${base}quiz`, label: 'Квиз', icon: '❓', hint: 'Вопросы на понимание с разбором' },
+    ],
+  },
+  {
+    id: 'reference',
+    label: 'Справочник',
+    items: [
+      { href: `${base}tools`, label: 'Калькуляторы', icon: '🧮', hint: 'SO₂, сахар, кислотность, бентонит, ёмкости' },
+      { href: `${base}glossary`, label: 'Глоссарий', icon: '📖', hint: 'Термины с пояснениями и связями' },
+      { href: `${base}harvest`, label: 'Планировщик урожая', icon: '📅', hint: 'Лоты и этапы переработки сезона' },
+    ],
+  },
+];
+
+const tailLinks: NavItem[] = [{ href: `${base}about`, label: 'О проекте' }];
+
+function isActive(item: NavItem) {
+  const prefix = item.match ?? item.href;
   return currentPath.startsWith(prefix) && prefix !== base;
 }
+const groupActive = (g: NavGroup) => g.items.some(isActive);
+
+const linkCls = (on: boolean) =>
+  `px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+    on
+      ? 'bg-wine-50 text-wine-800 dark:bg-wine-950/50 dark:text-wine-300'
+      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800'
+  }`;
 ---
 
 <header class="sticky top-0 z-50 bg-white/90 dark:bg-stone-950/90 backdrop-blur border-b border-stone-200 dark:border-stone-800">
+  <a
+    href="#main"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-[60] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-wine-700 focus:text-white"
+  >
+    Перейти к содержимому
+  </a>
   <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-16">
-      <!-- Logo -->
-      <a href={base} class="flex items-center gap-2 font-bold text-wine-800 dark:text-wine-400 text-lg">
-        <span class="text-2xl">🍷</span>
-        <span class="hidden sm:block">Виноделие</span>
+    <div class="flex items-center justify-between h-16 gap-3">
+      <a href={base} class="flex items-center gap-2 font-bold text-wine-800 dark:text-wine-400 text-lg flex-shrink-0">
+        <span class="text-2xl" aria-hidden="true">🍷</span>
+        <span class="hidden sm:inline md:hidden lg:inline">Школа виноделия</span>
       </a>
 
-      <!-- Desktop nav -->
-      <nav class="hidden md:flex items-center gap-1">
-        {navLinks.map(link => (
-          <a
-            href={link.href}
-            class={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
-              ${isActive(link.href, link.exact, link.match)
-                ? 'bg-wine-50 text-wine-800 dark:bg-wine-950/50 dark:text-wine-300'
-                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800'}`}
-          >
-            {link.label}
-          </a>
+      <!-- Основная навигация -->
+      <nav class="hidden md:flex items-center gap-1" aria-label="Основная навигация">
+        {topLinks.map((l) => (
+          <a href={l.href} class={linkCls(isActive(l))} aria-current={isActive(l) ? 'page' : undefined}>{l.label}</a>
+        ))}
+
+        {groups.map((g) => (
+          <div class="relative" data-nav-group>
+            <button
+              type="button"
+              class={`${linkCls(groupActive(g))} inline-flex items-center gap-1`}
+              aria-expanded="false"
+              aria-controls={`nav-${g.id}`}
+              data-nav-toggle
+            >
+              {g.label}
+              <svg class="w-3.5 h-3.5 transition-transform" data-chevron viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 6l4 4 4-4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <div
+              id={`nav-${g.id}`}
+              class="hidden absolute right-0 mt-2 w-72 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-xl p-2"
+              data-nav-panel
+            >
+              {g.items.map((it) => (
+                <a
+                  href={it.href}
+                  aria-current={isActive(it) ? 'page' : undefined}
+                  class={`flex items-start gap-3 rounded-lg px-3 py-2 transition-colors ${
+                    isActive(it) ? 'bg-wine-50 dark:bg-wine-950/40' : 'hover:bg-stone-50 dark:hover:bg-stone-800'
+                  }`}
+                >
+                  <span class="text-lg leading-6" aria-hidden="true">{it.icon}</span>
+                  <span>
+                    <span class="block text-sm font-medium text-stone-800 dark:text-stone-100">{it.label}</span>
+                    <span class="block text-xs text-stone-500 dark:text-stone-400">{it.hint}</span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {tailLinks.map((l) => (
+          <a href={l.href} class={linkCls(isActive(l))} aria-current={isActive(l) ? 'page' : undefined}>{l.label}</a>
         ))}
       </nav>
 
-      <!-- Right controls -->
-      <div class="flex items-center gap-2">
-        <!-- Search button -->
-        <button
-          id="search-btn"
-          class="btn-ghost text-stone-500 dark:text-stone-400"
-          aria-label="Поиск (/)">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <button id="search-btn" type="button" class="btn-ghost text-stone-500 dark:text-stone-400" aria-label="Поиск по сайту (клавиша /)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <kbd class="hidden lg:inline-flex items-center gap-1 text-xs border border-stone-200 dark:border-stone-700 rounded px-1.5 py-0.5 font-mono">/</kbd>
+          <kbd class="hidden lg:inline-flex items-center gap-1 text-xs border border-stone-200 dark:border-stone-700 rounded px-1.5 py-0.5 font-mono" aria-hidden="true">/</kbd>
         </button>
 
-        <!-- Theme toggle -->
-        <button id="theme-toggle" class="btn-ghost" aria-label="Переключить тему">
-          <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button id="theme-toggle" type="button" class="btn-ghost" aria-label="Переключить тему">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364-.707-.707M6.343 6.343l-.707-.707m12.728 0-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
-          <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
         </button>
 
-        <!-- Mobile menu button -->
-        <button id="mobile-menu-btn" class="md:hidden btn-ghost" aria-label="Меню">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button
+          id="mobile-menu-btn"
+          type="button"
+          class="md:hidden btn-ghost"
+          aria-label="Открыть меню"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
       </div>
     </div>
 
-    <!-- Mobile nav -->
-    <div id="mobile-menu" class="md:hidden hidden pb-4 border-t border-stone-200 dark:border-stone-800 pt-3">
-      <nav class="flex flex-col gap-1">
-        {navLinks.map(link => (
-          <a
-            href={link.href}
-            class={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
-              ${isActive(link.href, link.exact, link.match)
-                ? 'bg-wine-50 text-wine-800 dark:bg-wine-950/50 dark:text-wine-300'
-                : 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'}`}
-          >
-            {link.label}
-          </a>
+    <!-- Мобильное меню: группы с заголовками, прокрутка внутри, а не за край экрана -->
+    <div id="mobile-menu" class="md:hidden hidden border-t border-stone-200 dark:border-stone-800 max-h-[calc(100vh-4rem)] overflow-y-auto pb-4 pt-3">
+      <nav class="space-y-4" aria-label="Меню">
+        <div class="flex flex-col gap-1">
+          <a href={base} class={linkCls(currentPath === base)} aria-current={currentPath === base ? 'page' : undefined}>Главная</a>
+          {topLinks.map((l) => (
+            <a href={l.href} class={linkCls(isActive(l))} aria-current={isActive(l) ? 'page' : undefined}>{l.label}</a>
+          ))}
+        </div>
+        {groups.map((g) => (
+          <div>
+            <div class="px-3 mb-1 text-[11px] uppercase tracking-wider text-stone-500 dark:text-stone-400">{g.label}</div>
+            <div class="flex flex-col gap-1">
+              {g.items.map((it) => (
+                <a href={it.href} class={linkCls(isActive(it))} aria-current={isActive(it) ? 'page' : undefined}>
+                  <span aria-hidden="true">{it.icon}</span> {it.label}
+                </a>
+              ))}
+            </div>
+          </div>
         ))}
+        <div class="flex flex-col gap-1">
+          {tailLinks.map((l) => (
+            <a href={l.href} class={linkCls(isActive(l))} aria-current={isActive(l) ? 'page' : undefined}>{l.label}</a>
+          ))}
+        </div>
       </nav>
     </div>
   </div>
 </header>
 
 <script>
-  // Theme toggle
-  const themeBtn = document.getElementById('theme-toggle');
-  themeBtn?.addEventListener('click', () => {
+  // Тема
+  document.getElementById('theme-toggle')?.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   });
 
-  // Mobile menu
-  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  // Мобильное меню
+  const mobileBtn = document.getElementById('mobile-menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
-  mobileMenuBtn?.addEventListener('click', () => {
-    mobileMenu?.classList.toggle('hidden');
+  mobileBtn?.addEventListener('click', () => {
+    const open = mobileMenu?.classList.toggle('hidden') === false;
+    mobileBtn.setAttribute('aria-expanded', String(open));
+    mobileBtn.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
   });
 
-  // Search button
-  const searchBtn = document.getElementById('search-btn');
-  searchBtn?.addEventListener('click', () => {
+  // Выпадающие группы: клик, Escape, клик мимо, уход фокуса
+  const groupEls = Array.from(document.querySelectorAll<HTMLElement>('[data-nav-group]'));
+  function setOpen(g: HTMLElement, open: boolean) {
+    const btn = g.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+    const panel = g.querySelector<HTMLElement>('[data-nav-panel]');
+    panel?.classList.toggle('hidden', !open);
+    btn?.setAttribute('aria-expanded', String(open));
+    g.querySelector('[data-chevron]')?.classList.toggle('rotate-180', open);
+  }
+  function closeAll(except?: HTMLElement) {
+    groupEls.forEach((g) => g !== except && setOpen(g, false));
+  }
+  groupEls.forEach((g) => {
+    const btn = g.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+    btn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = btn.getAttribute('aria-expanded') !== 'true';
+      closeAll(g);
+      setOpen(g, willOpen);
+    });
+    g.addEventListener('focusout', (e) => {
+      if (!g.contains(e.relatedTarget as Node)) setOpen(g, false);
+    });
+    g.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        setOpen(g, false);
+        btn?.focus();
+      }
+    });
+  });
+  document.addEventListener('click', () => closeAll());
+
+  // Поиск
+  document.getElementById('search-btn')?.addEventListener('click', () => {
     document.dispatchEvent(new CustomEvent('open-search'));
   });
 </script>

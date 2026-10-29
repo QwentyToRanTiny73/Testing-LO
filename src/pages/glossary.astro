@@ -7,6 +7,32 @@ const sorted = terms.sort((a, b) => a.data.term.localeCompare(b.data.term, 'ru')
 
 const allTags = [...new Set(sorted.flatMap(t => t.data.tags || []))].sort((a, b) => a.localeCompare(b, 'ru'));
 const base = import.meta.env.BASE_URL;
+
+// Сопоставление «Связано: …» с реальными статьями. Названия в related пишутся
+// по-разному («SO₂ свободный» против «Свободный SO₂», «ЯМБ» против полного
+// названия с аббревиатурой в скобках), поэтому строим несколько ключей на термин.
+const norm = (x: string) => x.toLowerCase().replace(/ё/g, 'е').replace(/[«»"(),.]/g, ' ').replace(/\s+/g, ' ').trim();
+const sortedWords = (x: string) => norm(x).split(' ').sort().join(' ');
+const alias = new Map<string, string>();
+for (const t of sorted) {
+  const name = t.data.term;
+  const keys = [name, name.replace(/\(.*?\)/g, '')];
+  const abbr = name.match(/\(([^)]+)\)/);
+  if (abbr) keys.push(abbr[1]);
+  for (const k of keys) {
+    alias.set(norm(k), t.slug);
+    alias.set(sortedWords(k), t.slug);
+  }
+}
+function resolveRelated(r: string): string | undefined {
+  const direct = alias.get(norm(r)) ?? alias.get(sortedWords(r));
+  if (direct) return direct;
+  // Однословное сокращение («Brett» → «Brettanomyces») — только если совпадение одно
+  const n = norm(r);
+  if (n.includes(' ') || n.length < 4) return undefined;
+  const hits = sorted.filter((t) => norm(t.data.term).startsWith(n));
+  return hits.length === 1 ? hits[0].slug : undefined;
+}
 ---
 
 <BaseLayout title="Глоссарий" description="Словарь терминов по технологии виноделия">
@@ -58,7 +84,8 @@ const base = import.meta.env.BASE_URL;
         const { Content } = await term.render();
         return (
           <div
-            class="glossary-item card"
+            class="glossary-item card scroll-mt-24"
+            id={term.slug}
             data-term={term.data.term.toLowerCase()}
             data-tags={JSON.stringify(term.data.tags || [])}
           >
@@ -70,9 +97,14 @@ const base = import.meta.env.BASE_URL;
             {term.data.related && term.data.related.length > 0 && (
               <div class="mt-3 flex flex-wrap gap-1 items-center">
                 <span class="text-xs text-stone-400">Связано:</span>
-                {term.data.related.map((r: string) => (
-                  <span class="text-xs px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">{r}</span>
-                ))}
+                {term.data.related.map((r: string) => {
+                  const slug = resolveRelated(r);
+                  return slug ? (
+                    <a href={`#${slug}`} class="related-link text-xs px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-wine-700 dark:text-wine-400 hover:underline">{r}</a>
+                  ) : (
+                    <span class="text-xs px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">{r}</span>
+                  );
+                })}
               </div>
             )}
             {term.data.tags && term.data.tags.length > 0 && (
@@ -118,6 +150,31 @@ const base = import.meta.env.BASE_URL;
   }
 
   searchInput?.addEventListener('input', filterItems);
+
+  function revealHash() {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el || !el.classList.contains('glossary-item')) return;
+    // Термин мог быть скрыт фильтром — сбрасываем фильтр, чтобы переход не вёл в пустоту
+    if (el.classList.contains('hidden')) {
+      searchInput.value = '';
+      activeTag = 'all';
+      filterItems();
+    }
+    el.scrollIntoView({ block: 'start' });
+    el.classList.add('ring-2', 'ring-wine-400');
+    setTimeout(() => el.classList.remove('ring-2', 'ring-wine-400'), 1800);
+  }
+
+  // Ссылки вида glossary/?q=брожение (из уроков) — фильтр сразу при загрузке
+  const q = new URLSearchParams(location.search).get('q');
+  if (q && searchInput) {
+    searchInput.value = q;
+    filterItems();
+  }
+  window.addEventListener('hashchange', revealHash);
+  revealHash();
 
   tagBtns.forEach(btn => {
     btn.addEventListener('click', () => {

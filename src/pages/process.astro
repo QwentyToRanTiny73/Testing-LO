@@ -33,6 +33,7 @@ const REVERSIBLE: Record<string, { label: string; cls: string }> = {
   title="Навигатор по технологической цепочке"
   description="Карта производства от приёмки винограда до розлива: операции по порядку, контрольные точки между ними и указатель дефектов по симптому"
 >
+  <div data-pagefind-body>
   <section class="bg-gradient-to-br from-wine-900 via-wine-800 to-oak-900 text-white py-12 px-4">
     <div class="max-w-5xl mx-auto">
       <nav class="flex items-center gap-2 text-sm text-white/70 mb-5">
@@ -166,5 +167,6 @@ const REVERSIBLE: Record<string, { label: string; cls: string }> = {
       <a href={`${base}simulator`} class="btn-secondary">Симулятор</a>
       <a href={`${base}glossary`} class="btn-secondary">Глоссарий</a>
     </div>
+  </div>
   </div>
 </BaseLayout>

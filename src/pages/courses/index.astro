@@ -30,16 +30,17 @@ const methodology = [
 ];
 ---
 
-<BaseLayout title="Курсы" description="Два курса по виноделию: практическая технология и научная энология">
+<BaseLayout title="Курсы" description="Курсы по виноделию: практическая технология, научная энология и симулятор решений">
   <!-- Hero -->
   <section class="bg-gradient-to-br from-wine-900 via-wine-800 to-indigo-950 text-white py-20 px-4">
     <div class="max-w-4xl mx-auto text-center">
       <div class="text-5xl mb-6">🍇</div>
       <h1 class="text-4xl sm:text-5xl font-bold mb-4 tracking-tight">Школа виноделия</h1>
-      <p class="text-xl text-stone-200 mb-3">Два пути к мастерству: практика и наука</p>
+      <p class="text-xl text-stone-200 mb-3">Практика, наука и тренажёр решений</p>
       <p class="text-stone-300 max-w-2xl mx-auto">
         Выберите курс под свою цель. Практикум ведёт через технологический процесс шаг за шагом;
-        энология объясняет, что происходит на молекулярном уровне. Курсы дополняют друг друга.
+        энология объясняет, что происходит на молекулярном уровне; симулятор даёт принять решения
+        на целом сезоне и увидеть последствия. Курсы дополняют друг друга.
       </p>
     </div>
   </section>
@@ -47,7 +48,7 @@ const methodology = [
   <!-- Course catalog -->
   <section class="max-w-5xl mx-auto px-4 sm:px-6 py-14">
     <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-200 mb-6">Каталог курсов</h2>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {courses.sort((a, b) => a.order - b.order).map((course) => {
         const s = stats.get(course.id)!;
         const isSim = course.kind === 'simulation';
@@ -105,7 +106,7 @@ const methodology = [
   <section class="bg-stone-100 dark:bg-stone-900 py-16 px-4">
     <div class="max-w-5xl mx-auto">
       <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-200 mb-2">Как устроено обучение</h2>
-      <p class="text-stone-500 dark:text-stone-400 mb-8">Оба курса используют доказанные методы эффективного обучения</p>
+      <p class="text-stone-500 dark:text-stone-400 mb-8">Все курсы используют доказанные методы эффективного обучения</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {methodology.map((m) => (
           <div class="card">

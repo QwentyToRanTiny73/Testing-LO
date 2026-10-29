@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { num } from './num';
+import { mashVolumeL, MASH_DENSITY_KG_PER_L } from '../../lib/enology';
 
 // «Парк ёмкостей» — планировщик распределения кампании по бродильным ёмкостям.
 // Вход: тоннаж по сортам + доли (розе-самотёк, разбавление) + коэффициенты.
@@ -28,7 +29,12 @@ export default function VesselParkCalc() {
   // Коэффициенты (ориентиры)
   const [yield_, setYield] = useState('700');   // л/т
   const [fill, setFill] = useState('78');        // % заполнения бродильной
-  const [redFactor, setRedFactor] = useState('1.55'); // красные на мезге ×
+  const [redFactor, setRedFactor] = useState('1.55'); // красные на мезге × (ручной режим)
+  // По умолчанию объём мезги считается от массы винограда: так ближе к реальному
+  // парку (~1 170 л бродильной на тонну красного при заполнении 78 %).
+  // Множитель к объёму вина оставлен для ручного режима: вместе с заполнением он
+  // учитывает запас на шапку дважды и даёт ~1 390 л/т.
+  const [redMode, setRedMode] = useState<'mass' | 'factor'>('mass');
   const [rosePct, setRosePct] = useState('10');  // розе-самотёк, %
   const [dilPct, setDilPct] = useState('0');     // разбавление, %
 
@@ -48,8 +54,16 @@ export default function VesselParkCalc() {
   const cabRed = cabWine * (1 - rose);
   const sapRed = sapWine * (1 - rose);
 
-  // Занятость ёмкости: белые/розе — по объёму сусла; красные — на мезге ×redFactor
+  // Занятость ёмкости: белые/розе — по объёму сусла; красные — по объёму мезги.
+  // Розе-самотёк сливают с мезги, поэтому он уменьшает занятость красной ёмкости.
   const capNeed = (occupancy: number) => (f > 0 ? occupancy / f : occupancy);
+  const redOccupancy = (tonnes: number, wine: number, red: number) =>
+    redMode === 'mass' ? Math.max(0, mashVolumeL(tonnes) - (wine - red)) : red * rf;
+  const cabOcc = redOccupancy(num(tCab), cabWine, cabRed);
+  const sapOcc = redOccupancy(num(tSap), sapWine, sapRed);
+  const perTonne = redMode === 'mass'
+    ? Math.round(capNeed(mashVolumeL(1)))
+    : Math.round(capNeed(y * rf));
 
   function mkRow(purpose: string, net: number, occupancy: number, vessel: number, note?: string): Row {
     const brutto = capNeed(occupancy);
@@ -58,8 +72,8 @@ export default function VesselParkCalc() {
   }
 
   const rows: Row[] = [
-    mkRow('Каберне на мезге', cabRed, cabRed * rf, 1500, 'красное на мезге ×' + rf.toFixed(2)),
-    mkRow('Саперави на мезге', sapRed, sapRed * rf, 1500, 'красное на мезге ×' + rf.toFixed(2)),
+    mkRow('Каберне на мезге', cabRed, cabOcc, 1500, `мезга ~${Math.round(cabOcc)} л`),
+    mkRow('Саперави на мезге', sapRed, sapOcc, 1500, `мезга ~${Math.round(sapOcc)} л`),
     mkRow('Мускат (брожение → хранение)', muscatJuice, muscatJuice, 1000),
     mkRow('Кокур + резерв белого', kokurJuice, kokurJuice, 800),
     mkRow('Розе (купаж)', roseVol, roseVol, 300, 'плюс 150 л ×2 для раздельного самотёка/отстоя'),
@@ -94,13 +108,36 @@ export default function VesselParkCalc() {
         </div>
       </div>
 
+      {/* Как считать объём красной мезги */}
+      <div>
+        <div className="text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Объём красной мезги</div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Способ расчёта мезги">
+          {([['mass', 'От массы винограда'], ['factor', 'Множитель к объёму вина']] as const).map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setRedMode(v)}
+              aria-pressed={redMode === v}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${redMode === v ? 'bg-wine-700 text-white' : 'btn-secondary'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-stone-500 dark:text-stone-400 mt-2">
+          {redMode === 'mass'
+            ? `Дроблёный гребнеотделённый виноград ~${MASH_DENSITY_KG_PER_L.toString().replace('.', ',')} кг/л: тонна даёт ~${Math.round(mashVolumeL(1))} л мезги. Запас на шапку и пену задаётся заполнением. Получается ~${perTonne} л бродильной на тонну.`
+            : `Мезга = объём вина × множитель, затем ещё запас на заполнение. Множитель 1,5–1,6 уже включает место под шапку, поэтому запас учитывается дважды: ~${perTonne} л бродильной на тонну.`}
+        </p>
+      </div>
+
       {/* Коэффициенты */}
       <div>
         <div className="text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Коэффициенты (ориентиры)</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {numField('yield', 'Выход, л/т', yield_, setYield, 'ориентир 650–750 л/т', '10')}
           {numField('fill', 'Заполнение бродильной, %', fill, setFill, 'запас на шапку/пену', '1')}
-          {numField('redfactor', 'Красные на мезге, ×', redFactor, setRedFactor, 'объём мезги к вину', '0.05')}
+          {redMode === 'factor' && numField('redfactor', 'Красные на мезге, ×', redFactor, setRedFactor, 'объём мезги к вину', '0.05')}
           {numField('rose', 'Розе-самотёк, %', rosePct, setRosePct, 'съём с каждого красного', '1')}
           {numField('dilution', 'Разбавление, %', dilPct, setDilPct, 'см. дисклеймер о легальности', '1')}
         </div>
@@ -148,9 +185,9 @@ export default function VesselParkCalc() {
       </div>
 
       <div className="text-sm text-stone-600 dark:text-stone-400 space-y-1">
-        <p>• «С запасом» — объём с учётом заполнения бродильной на {Math.round(f * 100)} %; красные посчитаны на мезге (×{rf.toFixed(2)}).</p>
+        <p>• «С запасом» — объём с учётом заполнения бродильной на {Math.round(f * 100)} %; красные посчитаны по объёму мезги, а не вина.</p>
         <p>• Розе-самотёк снимается с красных и уменьшает их объём; для раздельного отстоя удобны малые ёмкости 150 л.</p>
-        <p>• Запасы на мезгу и на заполнение частично перекрываются: множитель ×1,5–1,6 у многих поставщиков уже включает место под шапку. Расчёт получается консервативным — при подборе реального парка сверяйтесь с практикой (распространённый ориентир — около 950 л бродильной на тонну красного).</p>
+
       </div>
 
       <div className="rounded-lg border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-amber-800 dark:text-amber-300">
