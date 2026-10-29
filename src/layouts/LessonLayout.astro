@@ -10,22 +10,55 @@ import type { CollectionEntry } from 'astro:content';
 import { getModuleById } from '../data/modules';
 import { quizQuestions } from '../data/quizzes';
 import { flashcards } from '../data/flashcards';
-import { plural } from '../lib/plural';
+import { plural, lessonsLabel } from '../lib/plural';
+import CheckpointCard from '../components/course/CheckpointCard.astro';
+import { getStageById, type Checkpoint } from '../data/process';
 
+interface LessonRef {
+  title: string;
+  slug: string;
+  moduleId: string;
+  moduleTitle: string;
+}
 interface Props {
   lesson: CollectionEntry<'lessons'>;
   headings: { depth: number; slug: string; text: string }[];
-  prevLesson?: { title: string; slug: string };
-  nextLesson?: { title: string; slug: string };
+  prevLesson?: LessonRef;
+  nextLesson?: LessonRef;
+  position: {
+    lessonInModule: number;
+    lessonsInModule: number;
+    moduleIndex: number;
+    modulesInCourse: number;
+    lessonInCourse: number;
+    lessonsInCourse: number;
+  };
+  moduleLessons: LessonRef[];
+  courseId: string;
+  courseTitle: string;
+  /** Контрольная точка после текущего модуля — показывается на границе модулей */
+  checkpoint?: Checkpoint;
+  nextCourse?: { id: string; title: string; kind: string; href?: string };
 }
 
-const { lesson, headings, prevLesson, nextLesson } = Astro.props;
+const {
+  lesson, headings, prevLesson, nextLesson, position, moduleLessons,
+  courseId, courseTitle, checkpoint, nextCourse,
+} = Astro.props;
 const module = getModuleById(lesson.data.module);
 const base = import.meta.env.BASE_URL;
 
 // Related quizzes and flashcards for this module
 const moduleQuizCount = quizQuestions.filter(q => q.moduleId === lesson.data.module).length;
 const moduleCardCount = flashcards.filter(f => f.moduleId === lesson.data.module).length;
+
+const stage = module?.stage ? getStageById(module.stage) : undefined;
+const crossesModule = !!nextLesson && nextLesson.moduleId !== lesson.data.module;
+const coursePct = Math.round((position.lessonInCourse / position.lessonsInCourse) * 100);
+const currentSlug = lesson.slug.split('/').pop();
+const nextCourseHref = nextCourse
+  ? nextCourse.kind === 'simulation' ? `${base}${nextCourse.href}` : `${base}courses/${nextCourse.id}`
+  : undefined;
 ---
 
 <BaseLayout title={lesson.data.title} description={lesson.data.summary}>
@@ -64,6 +97,22 @@ const moduleCardCount = flashcards.filter(f => f.moduleId === lesson.data.module
         <Breadcrumbs module={module} lessonTitle={lesson.data.title} />
 
         <header class="mb-8">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400 mb-3">
+            <span>Модуль {position.moduleIndex} из {position.modulesInCourse}</span>
+            <span aria-hidden="true">·</span>
+            <span>Урок {position.lessonInModule} из {position.lessonsInModule}</span>
+            {stage && (
+              <>
+                <span aria-hidden="true">·</span>
+                <a href={`${base}process#${stage.id}`} class="hover:text-wine-700 dark:hover:text-wine-400 hover:underline" title="Место в технологической цепочке">
+                  {stage.icon} {stage.title.replace(/^Стадия \d+\. /, '')}
+                </a>
+              </>
+            )}
+          </div>
+          <div class="h-1 rounded-full bg-stone-200 dark:bg-stone-800 mb-4 overflow-hidden" role="progressbar" aria-label={`Позиция в курсе «${courseTitle}»`} aria-valuenow={position.lessonInCourse} aria-valuemin={1} aria-valuemax={position.lessonsInCourse}>
+            <div class="h-full bg-wine-600/70" style={`width:${coursePct}%`}></div>
+          </div>
           <div class="flex flex-wrap gap-2 mb-3">
             <span class={`text-xs px-2 py-0.5 rounded-full font-medium
               ${lesson.data.difficulty === 'базовый' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
@@ -95,13 +144,32 @@ const moduleCardCount = flashcards.filter(f => f.moduleId === lesson.data.module
           {lesson.data.tags.length > 0 && (
             <div class="flex flex-wrap gap-2 mt-4">
               {lesson.data.tags.map(tag => (
-                <a href={`${base}glossary`} class="text-xs px-2 py-1 rounded-md bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400 hover:bg-wine-50 dark:hover:bg-wine-950/30 hover:text-wine-700 dark:hover:text-wine-400 transition-colors">
+                <a href={`${base}glossary?q=${encodeURIComponent(tag)}`} class="text-xs px-2 py-1 rounded-md bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400 hover:bg-wine-50 dark:hover:bg-wine-950/30 hover:text-wine-700 dark:hover:text-wine-400 transition-colors">
                   #{tag}
                 </a>
               ))}
             </div>
           )}
         </header>
+
+        <details class="lg:hidden mb-6 rounded-xl border border-stone-200 dark:border-stone-800">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-stone-700 dark:text-stone-300">
+            {module?.icon} {module?.title}: {lessonsLabel(position.lessonsInModule)}
+          </summary>
+          <ol class="px-4 pb-3 space-y-1">
+            {moduleLessons.map((l, i) => (
+              <li>
+                <a
+                  href={`${base}course/${l.slug}`}
+                  aria-current={l.slug.endsWith(`/${currentSlug}`) ? 'page' : undefined}
+                  class={`block text-sm py-1 ${l.slug.endsWith(`/${currentSlug}`) ? 'font-semibold text-wine-700 dark:text-wine-400' : 'text-stone-600 dark:text-stone-400 hover:text-wine-700'}`}
+                >
+                  {i + 1}. {l.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </details>
 
         <div class="prose-wine" data-pagefind-body>
           <slot />
@@ -157,26 +225,83 @@ const moduleCardCount = flashcards.filter(f => f.moduleId === lesson.data.module
           </div>
         )}
 
-        <!-- Navigation -->
-        <nav class="mt-8 flex gap-4 justify-between">
-          {prevLesson ? (
-            <a href={`${base}course/${prevLesson.slug}`} class="btn-secondary flex-1 max-w-xs">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              <span class="truncate">{prevLesson.title}</span>
-            </a>
-          ) : <div class="flex-1 max-w-xs" />}
+        <!-- Контрольная точка на границе модулей -->
+        {checkpoint && (
+          <div class="mt-10">
+            <p class="text-sm font-medium text-stone-700 dark:text-stone-300 mb-3">
+              {crossesModule ? 'Перед следующим модулем — контрольная точка:' : 'Контрольная точка после модуля:'}
+            </p>
+            <CheckpointCard checkpoint={checkpoint} />
+          </div>
+        )}
 
-          {nextLesson ? (
-            <a href={`${base}course/${nextLesson.slug}`} class="btn-primary flex-1 max-w-xs justify-end">
-              <span class="truncate">{nextLesson.title}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
+        <!-- Навигация между уроками -->
+        <nav class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3" aria-label="Соседние уроки">
+          {prevLesson ? (
+            <a href={`${base}course/${prevLesson.slug}`} class="group min-w-0 rounded-xl border border-stone-200 dark:border-stone-800 p-4 hover:border-wine-300 dark:hover:border-wine-700 transition-colors">
+              <span class="block text-xs text-stone-500 dark:text-stone-400 mb-1">← Предыдущий урок</span>
+              <span class="block font-medium text-stone-800 dark:text-stone-200 line-clamp-2 group-hover:text-wine-700 dark:group-hover:text-wine-400">{prevLesson.title}</span>
             </a>
-          ) : <div class="flex-1 max-w-xs" />}
+          ) : <div class="hidden sm:block" />}
+
+          {nextLesson && (
+            <a
+              href={`${base}course/${nextLesson.slug}`}
+              data-complete-on-click
+              class="group min-w-0 rounded-xl border border-wine-200 dark:border-wine-800 bg-wine-50/60 dark:bg-wine-950/20 p-4 text-right hover:border-wine-400 transition-colors"
+            >
+              <span class="block text-xs text-wine-700 dark:text-wine-400 mb-1">
+                {crossesModule ? `Следующий модуль: ${nextLesson.moduleTitle} →` : 'Следующий урок →'}
+              </span>
+              <span class="block font-medium text-stone-800 dark:text-stone-200 line-clamp-2 group-hover:text-wine-700 dark:group-hover:text-wine-400">{nextLesson.title}</span>
+            </a>
+          )}
         </nav>
+
+        <!-- Конец курса: не тупик, а следующие шаги -->
+        {!nextLesson && (
+          <section class="mt-8 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/60 dark:bg-emerald-950/20 p-5" aria-labelledby="course-end-title">
+            <h2 id="course-end-title" class="font-semibold text-stone-800 dark:text-stone-100 mb-1">Это последний урок курса «{courseTitle}»</h2>
+            <p class="text-sm text-stone-600 dark:text-stone-400 mb-4">Отметьте урок пройденным и выберите, куда двигаться дальше.</p>
+            <div class="flex flex-wrap gap-2">
+              {nextCourse && nextCourseHref && (
+                <a href={nextCourseHref} data-complete-on-click class="btn-primary text-sm">
+                  {nextCourse.kind === 'simulation' ? 'Применить в симуляторе' : `Следующий курс: ${nextCourse.title}`} →
+                </a>
+              )}
+              <a href={`${base}courses/${courseId}`} data-complete-on-click class="btn-secondary text-sm">Программа курса</a>
+              {stage && <a href={`${base}process`} data-complete-on-click class="btn-secondary text-sm">Навигатор по цепочке</a>}
+              {moduleQuizCount > 0 && <a href={`${base}quiz/${lesson.data.module}`} data-complete-on-click class="btn-secondary text-sm">Квиз по модулю</a>}
+            </div>
+          </section>
+        )}
+
+        <script is:inline define:vars={{ lastLesson: {
+          id: lesson.id,
+          href: `${base}course/${lesson.data.module}/${currentSlug}`,
+          title: lesson.data.title,
+          moduleTitle: module?.title ?? '',
+          courseId,
+          courseTitle,
+        } }}>
+          // Запоминаем место остановки для «Продолжить» на главной и странице курса
+          try {
+            localStorage.setItem('last-lesson', JSON.stringify(Object.assign({}, lastLesson, { at: Date.now() })));
+          } catch (e) {}
+          // Переход дальше отмечает текущий урок пройденным: раньше прогресс
+          // засчитывался только отдельной кнопкой, и счётчики оставались на нуле
+          document.querySelectorAll('[data-complete-on-click]').forEach(function (a) {
+            a.addEventListener('click', function () {
+              try {
+                var p = JSON.parse(localStorage.getItem('lesson-progress') || '{}');
+                if (!p[lastLesson.id]) {
+                  p[lastLesson.id] = true;
+                  localStorage.setItem('lesson-progress', JSON.stringify(p));
+                }
+              } catch (e) {}
+            });
+          });
+        </script>
       </article>
 
       <!-- Right TOC -->

@@ -2,13 +2,14 @@
 import LessonLayout from '../../../layouts/LessonLayout.astro';
 import { getCollection } from 'astro:content';
 import { modules, getModuleById } from '../../../data/modules';
+import { courses, getCourseById } from '../../../data/courses';
+import { checkpointAfter } from '../../../data/process';
 
 export async function getStaticPaths() {
   const allLessons = await getCollection('lessons');
-  const moduleCourse = new Map(modules.map(m => [m.id, m.course]));
-  const moduleOrder = new Map(modules.map(m => [m.id, m.order]));
+  const moduleCourse = new Map(modules.map((m) => [m.id, m.course]));
+  const moduleOrder = new Map(modules.map((m) => [m.id, m.order]));
 
-  // Sort all lessons by course, then module order, then lesson order
   const sortedLessons = [...allLessons].sort((a, b) => {
     const modA = moduleOrder.get(a.data.module) ?? 99;
     const modB = moduleOrder.get(b.data.module) ?? 99;
@@ -16,40 +17,68 @@ export async function getStaticPaths() {
     return a.data.order - b.data.order;
   });
 
-  return allLessons.map(lesson => {
-    // Prev/next stay within the same course
-    const courseId = moduleCourse.get(lesson.data.module);
-    const courseLessons = sortedLessons.filter(l => moduleCourse.get(l.data.module) === courseId);
-    const idx = courseLessons.findIndex(l => l.id === lesson.id);
-    const prevLesson = idx > 0 ? courseLessons[idx - 1] : undefined;
-    const nextLesson = idx < courseLessons.length - 1 ? courseLessons[idx + 1] : undefined;
+  const href = (l: (typeof allLessons)[number]) => {
+    const parts = l.slug.split('/');
+    return `${l.data.module}/${parts[parts.length - 1]}`;
+  };
+  const ref = (l: (typeof allLessons)[number]) => ({
+    title: l.data.title,
+    slug: href(l),
+    moduleId: l.data.module,
+    moduleTitle: getModuleById(l.data.module)?.title ?? l.data.module,
+  });
 
-    const slugParts = lesson.slug.split('/');
-    const lessonSlug = slugParts[slugParts.length - 1];
+  // Порядок курсов для «что дальше» в конце курса
+  const orderedCourses = [...courses].sort((a, b) => a.order - b.order);
 
-    function getLessonHref(l: typeof lesson) {
-      const parts = l.slug.split('/');
-      return `${l.data.module}/${parts[parts.length - 1]}`;
-    }
+  return allLessons.map((lesson) => {
+    const courseId = moduleCourse.get(lesson.data.module)!;
+    const courseLessons = sortedLessons.filter((l) => moduleCourse.get(l.data.module) === courseId);
+    const idx = courseLessons.findIndex((l) => l.id === lesson.id);
+    const prev = idx > 0 ? courseLessons[idx - 1] : undefined;
+    const next = idx < courseLessons.length - 1 ? courseLessons[idx + 1] : undefined;
 
+    const moduleLessons = courseLessons.filter((l) => l.data.module === lesson.data.module);
+    const courseModules = modules.filter((m) => m.course === courseId).sort((a, b) => a.order - b.order);
+
+    // На границе модулей показываем контрольную точку, если она есть после текущего модуля
+    const crossesModule = !!next && next.data.module !== lesson.data.module;
+    const checkpoint = crossesModule || !next ? checkpointAfter(lesson.data.module) : undefined;
+
+    const ci = orderedCourses.findIndex((c) => c.id === courseId);
+    const nextCourse = !next ? orderedCourses[ci + 1] : undefined;
+
+    const parts = lesson.slug.split('/');
     return {
-      params: {
-        module: lesson.data.module,
-        lesson: lessonSlug,
-      },
+      params: { module: lesson.data.module, lesson: parts[parts.length - 1] },
       props: {
         lesson,
-        prevLesson: prevLesson ? { title: prevLesson.data.title, slug: getLessonHref(prevLesson) } : undefined,
-        nextLesson: nextLesson ? { title: nextLesson.data.title, slug: getLessonHref(nextLesson) } : undefined,
+        prevLesson: prev ? ref(prev) : undefined,
+        nextLesson: next ? ref(next) : undefined,
+        position: {
+          lessonInModule: moduleLessons.findIndex((l) => l.id === lesson.id) + 1,
+          lessonsInModule: moduleLessons.length,
+          moduleIndex: courseModules.findIndex((m) => m.id === lesson.data.module) + 1,
+          modulesInCourse: courseModules.length,
+          lessonInCourse: idx + 1,
+          lessonsInCourse: courseLessons.length,
+        },
+        moduleLessons: moduleLessons.map(ref),
+        courseId,
+        courseTitle: getCourseById(courseId)?.title ?? '',
+        checkpoint,
+        nextCourse: nextCourse
+          ? { id: nextCourse.id, title: nextCourse.title, kind: nextCourse.kind ?? 'content', href: nextCourse.href }
+          : undefined,
       },
     };
   });
 }
 
-const { lesson, prevLesson, nextLesson } = Astro.props;
-const { Content, headings } = await lesson.render();
+const props = Astro.props;
+const { Content, headings } = await props.lesson.render();
 ---
 
-<LessonLayout lesson={lesson} headings={headings} prevLesson={prevLesson} nextLesson={nextLesson}>
+<LessonLayout {...props} headings={headings}>
   <Content />
 </LessonLayout>

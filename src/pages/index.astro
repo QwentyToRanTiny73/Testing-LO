@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { courses } from '../data/courses';
 import { modules, getModulesByCourse } from '../data/modules';
+import { plural } from '../lib/plural';
 
 const base = import.meta.env.BASE_URL;
 const allLessons = await getCollection('lessons');
@@ -21,8 +22,18 @@ for (const l of allLessons) {
 const totalLessons = allLessons.length;
 const sortedCourses = [...courses].sort((a, b) => a.order - b.order);
 
+const contentCourses = sortedCourses.filter((c) => c.kind !== 'simulation');
+const simCourse = sortedCourses.find((c) => c.kind === 'simulation');
+
+// Рекомендованный маршрут: порядок курсов и зачем каждый
+const path = [
+  ...contentCourses.map((c) => ({ icon: c.icon, title: c.title, why: c.subtitle, href: `${base}courses/${c.id}` })),
+  ...(simCourse ? [{ icon: simCourse.icon, title: simCourse.title, why: 'Проверить решения на сценариях', href: `${base}${simCourse.href}` }] : []),
+];
+
 const features = [
-  { icon: '🧮', title: 'Калькуляторы', desc: 'SO₂, мацерация, бентонит, сахар, кислотность, Brix', href: `${base}tools` },
+  { icon: '🧭', title: 'Навигатор', desc: 'Цепочка операций, контрольные точки и дефекты по симптому', href: `${base}process` },
+  { icon: '🧮', title: 'Калькуляторы', desc: 'SO₂, мацерация, бентонит, сахар, кислотность, Brix, ёмкости', href: `${base}tools` },
   { icon: '🃏', title: 'Флэш-карты', desc: 'Интервальное повторение по алгоритму SM-2', href: `${base}study` },
   { icon: '❓', title: 'Квизы', desc: 'Проверка понимания по методу Сократа', href: `${base}quiz` },
   { icon: '📖', title: 'Глоссарий', desc: 'Термины технологии и энологии с пояснениями', href: `${base}glossary` },
@@ -37,8 +48,8 @@ const features = [
       <h1 class="text-4xl sm:text-5xl font-bold mb-4 tracking-tight">Школа виноделия</h1>
       <p class="text-xl text-stone-200 mb-2">Практическая технология и научная энология</p>
       <p class="text-stone-300 max-w-2xl mx-auto mb-8">
-        Два взаимодополняющих курса: один ведёт через производственный процесс шаг за шагом,
-        другой объясняет химию и биохимию вина. Эффективные методы обучения, калькуляторы и
+        Практикум ведёт по производству от приёмки до розлива, энология объясняет химию за каждым
+        приёмом, симулятор проверяет решения на сценариях. Калькуляторы, навигатор по цепочке и
         интервальное повторение. Все числовые значения — ориентиры, а не нормы.
       </p>
       <div class="flex flex-wrap justify-center gap-4">
@@ -53,12 +64,43 @@ const features = [
     </div>
   </section>
 
+  <!-- Продолжить с места остановки -->
+  <section id="continue-card" class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 hidden">
+    <a id="continue-link" href="#" class="flex items-center justify-between gap-4 rounded-2xl border border-wine-200 dark:border-wine-800 bg-wine-50 dark:bg-wine-950/30 p-5 hover:border-wine-400 transition-colors">
+      <span class="min-w-0">
+        <span class="block text-xs uppercase tracking-wide text-wine-700 dark:text-wine-400 mb-1">Продолжить с места остановки</span>
+        <span id="continue-title" class="block font-semibold text-stone-800 dark:text-stone-100 truncate"></span>
+        <span id="continue-meta" class="block text-sm text-stone-500 dark:text-stone-400 truncate"></span>
+      </span>
+      <span class="flex-shrink-0 text-wine-700 dark:text-wine-400 text-2xl" aria-hidden="true">→</span>
+    </a>
+  </section>
+
+  <!-- Маршрут обучения -->
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 pt-10" aria-labelledby="path-title">
+    <h2 id="path-title" class="text-2xl font-bold text-stone-800 dark:text-stone-200 mb-1">С чего начать</h2>
+    <p class="text-stone-500 dark:text-stone-400 mb-5">Рекомендованный порядок. Курсы независимы — можно идти в любом, но так знания складываются быстрее.</p>
+    <ol class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {path.map((step, i) => (
+        <li>
+          <a href={step.href} class="card h-full flex gap-3 hover:border-wine-300 dark:hover:border-wine-700 transition-colors group">
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-wine-700 text-white text-sm font-bold flex items-center justify-center">{i + 1}</span>
+            <span class="min-w-0">
+              <span class="block font-semibold text-stone-800 dark:text-stone-200 group-hover:text-wine-700 dark:group-hover:text-wine-400">{step.icon} {step.title}</span>
+              <span class="block text-sm text-stone-500 dark:text-stone-400">{step.why}</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </section>
+
   <!-- Platform stats -->
   <section class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="card text-center">
         <div class="text-3xl font-bold text-wine-700 dark:text-wine-400">{courses.length}</div>
-        <div class="text-sm text-stone-500 dark:text-stone-400 mt-1">Курса</div>
+        <div class="text-sm text-stone-500 dark:text-stone-400 mt-1">{plural(courses.length, ['Курс', 'Курса', 'Курсов'])}</div>
       </div>
       <div class="card text-center">
         <div class="text-3xl font-bold text-wine-700 dark:text-wine-400">{modules.length}</div>
@@ -77,7 +119,7 @@ const features = [
 
   <!-- Courses -->
   <section class="max-w-5xl mx-auto px-4 sm:px-6 pb-4">
-    <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-200 mb-6">Три курса</h2>
+    <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-200 mb-6">Курсы</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {sortedCourses.map((course) => {
         const s = courseStats.get(course.id)!;
@@ -120,7 +162,7 @@ const features = [
   <section class="bg-stone-100 dark:bg-stone-900 py-16 px-4 mt-12">
     <div class="max-w-5xl mx-auto">
       <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-200 mb-2">Инструменты и тренажёры</h2>
-      <p class="text-stone-500 dark:text-stone-400 mb-8">Доступны для обоих курсов</p>
+      <p class="text-stone-500 dark:text-stone-400 mb-8">Общие для всех курсов</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {features.map((f) => (
           <a href={f.href} class="card hover:border-wine-300 dark:hover:border-wine-700 hover:shadow-md transition-all group">
@@ -135,12 +177,23 @@ const features = [
 </BaseLayout>
 
 <script>
+  import { readProgress, readLastLesson } from '../lib/progress';
+
   function updateHomeProgress() {
-    const stored = JSON.parse(localStorage.getItem('lesson-progress') || '{}');
-    const completed = Object.values(stored).filter(Boolean).length;
+    const completed = Object.values(readProgress()).filter(Boolean).length;
     const el = document.getElementById('completed-count');
     if (el) el.textContent = String(completed);
   }
   updateHomeProgress();
   window.addEventListener('storage', updateHomeProgress);
+
+  const last = readLastLesson();
+  if (last) {
+    document.getElementById('continue-link')?.setAttribute('href', last.href);
+    const t = document.getElementById('continue-title');
+    const m = document.getElementById('continue-meta');
+    if (t) t.textContent = last.title;
+    if (m) m.textContent = `${last.courseTitle} · ${last.moduleTitle}`;
+    document.getElementById('continue-card')?.classList.remove('hidden');
+  }
 </script>
