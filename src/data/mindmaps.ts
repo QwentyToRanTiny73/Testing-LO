@@ -36,7 +36,7 @@ export const mindMaps: Record<string, MindNode> = {
         id: 'so2-calculation',
         label: 'Расчёт',
         children: [
-          { id: 'so2-formula', label: '[SO₂]мол = [SO₂]св / (1 + 10^(pH−1,77))' },
+          { id: 'so2-formula', label: '[SO₂]мол = [SO₂]св / (1 + 10^(pH−1,81))' },
           { id: 'so2-target', label: 'Цель: 0,5–0,8 мг/л мол. (ориентир)' },
           { id: 'so2-kms', label: 'КМС: 57,6% SO₂', href: `${BASE}tools#so2` },
         ],
@@ -62,7 +62,7 @@ export const mindMaps: Record<string, MindNode> = {
         label: 'Бентонит',
         children: [
           { id: 'ok-mechanism', label: 'Монтмориллонит → (-) заряд → (+) белки' },
-          { id: 'ok-heat-test', label: 'Тепловой тест 80°C×30мин', href: `${BASE}course/okleyka/01-bentonit` },
+          { id: 'ok-heat-test', label: 'Тепловой тест 80 °C ≥2 ч', href: `${BASE}course/okleyka/01-bentonit` },
           { id: 'ok-dose', label: 'Подбор дозы: пробная оклейка', href: `${BASE}tools#bentonite` },
           { id: 'ok-bentonit-inhibit', label: '⚠️ Добавлять ПОСЛЕ ферментов' },
         ],
