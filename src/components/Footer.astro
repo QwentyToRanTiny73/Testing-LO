@@ -5,11 +5,11 @@ const year = new Date().getFullYear();
 
 <footer class="border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-950 mt-16">
   <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
       <div>
         <div class="flex items-center gap-2 font-bold text-wine-800 dark:text-wine-400 mb-3">
           <span class="text-xl">🍷</span>
-          <span>Курс по виноделию</span>
+          <span>Школа виноделия</span>
         </div>
         <p class="text-sm text-stone-500 dark:text-stone-400">
           Учебный курс по классической технологии виноделия. Школа Магарача, Крым.
@@ -17,14 +17,32 @@ const year = new Date().getFullYear();
       </div>
 
       <div>
-        <h3 class="text-sm font-semibold text-stone-700 dark:text-stone-300 mb-3">Разделы</h3>
+        <h3 class="text-sm font-semibold text-stone-700 dark:text-stone-300 mb-3">Обучение</h3>
         <ul class="space-y-2">
           {[
-            ['Курс', `${base}course`],
-            ['Инструменты', `${base}tools`],
-            ['Планировщик урожая', `${base}harvest`],
+            ['Курсы', `${base}courses`],
+            ['Навигатор по цепочке', `${base}process`],
+            ['Симулятор', `${base}simulator`],
+            ['Флэш-карты', `${base}study`],
+            ['Квиз', `${base}quiz`],
+          ].map(([label, href]) => (
+            <li>
+              <a href={href} class="text-sm text-stone-500 hover:text-wine-700 dark:text-stone-400 dark:hover:text-wine-400 transition-colors">
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-semibold text-stone-700 dark:text-stone-300 mb-3">Справочник</h3>
+        <ul class="space-y-2">
+          {[
+            ['Калькуляторы', `${base}tools`],
             ['Глоссарий', `${base}glossary`],
-            ['О курсе', `${base}about`],
+            ['Планировщик урожая', `${base}harvest`],
+            ['О проекте', `${base}about`],
           ].map(([label, href]) => (
             <li>
               <a href={href} class="text-sm text-stone-500 hover:text-wine-700 dark:text-stone-400 dark:hover:text-wine-400 transition-colors">
@@ -46,7 +64,7 @@ const year = new Date().getFullYear();
     </div>
 
     <div class="mt-8 pt-6 border-t border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-stone-400">
-      <span>© {year} Учебный курс по виноделию</span>
+      <span>© {year} Школа виноделия</span>
       <span>Школа Магарача · ВНИИВиВ «Магарач» · Крым</span>
     </div>
   </div>
