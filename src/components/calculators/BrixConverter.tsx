@@ -1,23 +1,15 @@
 import { useId, useState } from 'react';
 import { num } from './num';
 
-// Пересчёт шкал сахаристости.
-// Brix → плотность: стандартная аппроксимация, пригодная в диапазоне 0–30 °Brix.
-// Oechsle = (плотность − 1) × 1000.
-// Потенциальный спирт ≈ Brix × 0,575 (ориентир; принятая вилка 0,55–0,60).
-// Температурная поправка ареометра, калиброванного на 20 °C: ~0,07 °Brix на °C
-// (истинное значение 0,05–0,1 в зависимости от температуры и плотности).
+// Пересчёт шкал сахаристости. Формулы и коэффициенты — в src/lib/enology.ts.
+import { brixToSG, BRIX_TEMP_CORR_PER_C as TEMP_CORR_PER_C, BRIX_TO_ALCOHOL } from '../../lib/enology';
 
-const TEMP_CORR_PER_C = 0.07;
-
-function brixToDensity(brix: number) {
-  return 1 + brix / (258.6 - (brix / 258.2) * 227.1);
-}
+const brixToDensity = brixToSG;
 function brixToOechsle(brix: number) {
-  return Math.round((brixToDensity(brix) - 1) * 1000);
+  return Math.round((brixToSG(brix) - 1) * 1000);
 }
 function brixToAlcohol(brix: number) {
-  return brix * 0.575;
+  return brix * BRIX_TO_ALCOHOL;
 }
 
 export default function BrixConverter() {

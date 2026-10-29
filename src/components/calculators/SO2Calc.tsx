@@ -1,16 +1,22 @@
 import { useId, useState, useMemo } from 'react';
 import { num } from './num';
+import { molecularFraction, PKA1_SO2 as PKA1, EU_TOTAL_SO2_LIMIT } from '../../lib/enology';
 
 const DISCLAIMER =
   'Ориентир, не норматив. Реальная потребность зависит от состава вина (ацетальдегид, пируват, кетокислоты, сахара) и температуры. После внесения измерьте свободный SO₂ через 24–48 ч и при необходимости откорректируйте.';
 
-// Модель равновесия SO₂. pKa1 сернистой кислоты ≈ 1,81 (при ~20 °C).
-// Доля молекулярной формы от свободного SO₂: 1 / (1 + 10^(pH − pKa1)).
-const PKA1 = 1.81;
+// Модель равновесия SO₂ и константы — в src/lib/enology.ts (общие с симулятором).
 
-function molecularFraction(pH: number): number {
-  return 1 / (1 + Math.pow(10, pH - PKA1));
-}
+// Типы вина: целевой молекулярный SO₂ и предел общего SO₂ по ЕС (Регламент 2019/934).
+// Красным достаточно меньшего молекулярного — их частично защищают фенолы;
+// вина с остаточным сахаром держат выше, чтобы не допустить повторного брожения.
+const WINE_TYPES = {
+  whiteDry: { label: 'Сухое белое или розе', molecular: 0.8, limit: EU_TOTAL_SO2_LIMIT.whiteRoseDry },
+  redDry: { label: 'Сухое красное', molecular: 0.5, limit: EU_TOTAL_SO2_LIMIT.redDry },
+  whiteSweet: { label: 'Белое или розе, сахар ≥ 5 г/л', molecular: 1.2, limit: EU_TOTAL_SO2_LIMIT.whiteRoseSweet },
+  redSweet: { label: 'Красное, сахар ≥ 5 г/л', molecular: 1.0, limit: EU_TOTAL_SO2_LIMIT.redSweet },
+} as const;
+type WineType = keyof typeof WINE_TYPES;
 
 // Реагенты для внесения SO₂.
 // pct — массовая доля SO₂ (для твёрдых и газа) или г SO₂ на 100 мл (для растворов, в/о).
@@ -46,6 +52,13 @@ export default function SO2Calc() {
   const [efficiency, setEfficiency] = useState('100');
   const [currentTotal, setCurrentTotal] = useState('80');
   const [maxTotal, setMaxTotal] = useState('200');
+  const [wineType, setWineType] = useState<WineType>('whiteDry');
+
+  function onWineTypeChange(t: WineType) {
+    setWineType(t);
+    setTargetMolecular(String(WINE_TYPES[t].molecular));
+    setMaxTotal(String(WINE_TYPES[t].limit));
+  }
 
   const reagent = REAGENTS.find((r) => r.id === reagentId)!;
 
@@ -147,6 +160,20 @@ export default function SO2Calc() {
           доля молек. = 1 / (1 + 10^(pH − {PKA1}))   ·   прибавка = (цель.своб − тек.своб) / эффективность<br />
           реагент = прибавка(мг/л) × объём(л) / 1000 / (чистота/100)
         </code>
+      </div>
+
+      {/* Тип вина задаёт цель и предел */}
+      <div>
+        <label className="label" htmlFor={`${uid}-type`}>Тип вина</label>
+        <select id={`${uid}-type`} className="select max-w-sm" value={wineType} onChange={(e) => onWineTypeChange(e.target.value as WineType)}>
+          {(Object.keys(WINE_TYPES) as WineType[]).map((k) => (
+            <option key={k} value={k}>{WINE_TYPES[k].label}</option>
+          ))}
+        </select>
+        <p className="text-xs text-stone-400 mt-1">
+          Ставит целевой молекулярный SO₂ {WINE_TYPES[wineType].molecular.toString().replace('.', ',')} мг/л и предел общего {WINE_TYPES[wineType].limit} мг/л (ЕС).
+          В РФ сверяйте предел с ТР ЕАЭС 047/2018. Значения можно поправить вручную.
+        </p>
       </div>
 
       {/* Основные входные данные */}

@@ -48,6 +48,7 @@ export default function MacerationCalc() {
   const [variety, setVariety] = useState('Каберне Совиньон');
   const [style, setStyle] = useState<Style>('medium');
   const [temp, setTemp] = useState('18');
+  const [mustTemp, setMustTemp] = useState('');
   const [method, setMethod] = useState<Method>('remontage');
 
   const varieties = Object.keys(macTable);
@@ -67,12 +68,19 @@ export default function MacerationCalc() {
   // Считаем при рендере, иначе диапазон дней остаётся от прошлого нажатия
   // рядом с уже изменённой температурой в подписи.
   const base = macTable[variety]?.[style];
-  const tempN = num(temp, 18);
-  // Поправка по температуре помещения: теплее — мацерация чуть короче.
+  const cellar = num(temp, 18);
+  // Экстракцию определяет температура мезги, а не помещения. В активной фазе
+  // брожение само греет мезгу на 4–8 °C выше помещения; берём середину, если
+  // температуру мезги не измеряли.
+  const measured = mustTemp.trim() !== '' && Number.isFinite(parseFloat(mustTemp));
+  const must = measured ? num(mustTemp) : cellar + 6;
   let tempAdj = 0;
-  if (tempN > 22) tempAdj = -1;
-  if (tempN > 25) tempAdj = -2;
-  if (tempN < 14) tempAdj = 1;
+  if (must < 20) tempAdj = 2;
+  else if (must < 24) tempAdj = 1;
+  else if (must > 32) tempAdj = -2;
+  else if (must > 30) tempAdj = -1;
+  const tooCold = must < 20;
+  const tooHot = must > 32;
   const result: MacData | null = base
     ? {
         minDays: Math.max(1, base.minDays + tempAdj),
@@ -109,6 +117,17 @@ export default function MacerationCalc() {
           />
         </div>
         <div>
+          <label className="label" htmlFor={`${uid}-must`}>Температура мезги, если измерена (°C) <span className="text-stone-400 text-xs">(необязательно)</span></label>
+          <input
+            id={`${uid}-must`}
+            type="number"
+            className="input"
+            value={mustTemp}
+            placeholder={`оценка ~${Math.round(cellar + 6)} °C`}
+            onChange={e => setMustTemp(e.target.value)}
+          />
+        </div>
+        <div>
           <label className="label" htmlFor={`${uid}-method`}>Способ работы с мезгой и осадком</label>
           <select id={`${uid}-method`} className="select" value={method} onChange={e => setMethod(e.target.value as Method)}>
             {methods.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
@@ -123,8 +142,26 @@ export default function MacerationCalc() {
             <div className="text-3xl font-bold text-wine-900 dark:text-wine-200">
               {result.minDays}–{result.maxDays} дней
             </div>
-            <div className="text-xs text-wine-600 dark:text-wine-400 mt-1">Ориентир с учётом температуры в помещении {temp}°C</div>
+            <div className="text-xs text-wine-600 dark:text-wine-400 mt-1">
+              {measured
+                ? `По измеренной температуре мезги ${Math.round(must)} °C`
+                : `Мезга в активной фазе ~${Math.round(cellar + 4)}–${Math.round(cellar + 8)} °C при помещении ${Math.round(cellar)} °C`}
+              {tempAdj !== 0 && ` · поправка ${tempAdj > 0 ? '+' : ''}${tempAdj} дн.`}
+            </div>
           </div>
+
+          {tooCold && (
+            <div className="rounded-lg border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-300">
+              Мезга ниже ~20 °C: экстракция идёт медленно, а брожение рискует не стартовать или встать на финише. Нужен подогрев —
+              прогреть часть объёма и вернуть в массу, на финише греющий кабель или погружной нагреватель по датчику в вине.
+            </div>
+          )}
+          {tooHot && (
+            <div className="rounded-lg border-l-4 border-red-400 bg-red-50 dark:bg-red-950/20 p-3 text-sm text-red-800 dark:text-red-300">
+              Мезга выше ~32 °C: растёт риск гибели дрожжей, остановки брожения и летучей кислотности, вытягиваются грубые танины.
+              Охлаждайте постепенно и чаще работайте с шапкой.
+            </div>
+          )}
 
           <div className="rounded-lg bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-4">
             <div className="font-medium text-stone-700 dark:text-stone-300 text-sm mb-2">Способ: {methods.find(m => m.value === method)?.label}</div>
@@ -144,7 +181,7 @@ export default function MacerationCalc() {
             <strong>⚠️ {DISCLAIMER}</strong>
             <br />
             Ориентируйтесь на регулярную дегустацию и аналитику, а не только на количество дней. Фенольная зрелость сырья, винодельня, год урожая — всё влияет на результат.
-            Поправка по температуре помещения здесь мягкая и работает как подсказка: кинетику мацерации задаёт температура самой мезги, которая при активном брожении красных держится на 25–30 °C во многом независимо от того, насколько прохладен погреб.
+            Кинетику мацерации задаёт температура самой мезги. Калькулятор оценивает её как температуру помещения плюс 4–8 °C тепла брожения в активной фазе; если мезгу измеряли, введите её температуру — это точнее. Оптимум экстракции для красных — около 24–30 °C.
           </div>
         </div>
       )}
