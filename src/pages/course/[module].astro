@@ -39,7 +39,7 @@ const totalTime = lessons.reduce((s: number, l: any) => s + l.data.durationMin, 
       </aside>
 
       <!-- Main -->
-      <main class="flex-1 min-w-0">
+      <div class="flex-1 min-w-0">
         <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
           <a href={base} class="hover:text-wine-700">Главная</a>
           <span>/</span>
@@ -117,7 +117,7 @@ const totalTime = lessons.reduce((s: number, l: any) => s + l.data.durationMin, 
             <p>Уроки для этого модуля скоро появятся.</p>
           </div>
         )}
-      </main>
+      </div>
     </div>
   </div>
 </BaseLayout>
