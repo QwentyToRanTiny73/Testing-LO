@@ -8,7 +8,7 @@ type Stage = 'must' | 'wine';
 export default function AcidCalc() {
   const [currentTA, setCurrentTA] = useState('6.5');
   const [targetTA, setTargetTA] = useState('7.5');
-  const [volumeL, setVolumeL] = useState('1000');
+  const [volumeL, setVolumeL] = useState('100');
   const [mode, setMode] = useState<Mode>('acidify');
   const [stage, setStage] = useState<Stage>('must');
   const uid = useId();

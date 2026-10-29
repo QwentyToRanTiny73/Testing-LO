@@ -162,8 +162,8 @@ function so2MolecularDose(target: number, extraFormula = ''): SimDose {
       const share = comma(molecularFraction(b.pH) * 100);
       const calc =
         deficit > 0
-          ? `При pH ${comma(b.pH, 2)} молекулярная форма — ${share} % свободного, значит для ${comma(target)} мг/л молекулярного нужно ${Math.round(need)} мг/л свободного. Сейчас ${b.freeSO2} — не хватает ${Math.round(deficit)} мг/л. Навеска: ${b.volumeL} × ${Math.round(deficit)} / 1000 / 0,576 ≈ ${comma(exp)} г.`
-          : `При pH ${comma(b.pH, 2)} для ${comma(target)} мг/л молекулярного нужно ${Math.round(need)} мг/л свободного, а в партии уже ${b.freeSO2}.`;
+          ? `При pH ${comma(b.pH, 2)} молекулярная форма — ${share} % свободного, значит для ${comma(target)} мг/л молекулярного нужно ${comma(need)} мг/л свободного. Сейчас ${b.freeSO2} — не хватает ${comma(deficit)} мг/л. Навеска: ${b.volumeL} × ${comma(deficit)} / 1000 / 0,576 ≈ ${comma(exp)} г.`
+          : `При pH ${comma(b.pH, 2)} для ${comma(target)} мг/л молекулярного нужно ${comma(need)} мг/л свободного, а в партии уже ${b.freeSO2}.`;
       const added = so2FromReagent(grams, b.volumeL);
       const fact = grams > 0 ? ` Внесено ${comma(grams)} г — это +${Math.round(added)} мг/л SO₂.` : '';
       return (
@@ -227,7 +227,7 @@ const whiteAromatic: SimScenario = {
   intro:
     'У вас партия Муската белого. Цель — свежее сухое вино с ярким мускатно-цветочным ароматом и хрустящей кислотностью. Главные враги — окисление, потеря летучих терпенов и нежелательное яблочно-молочное брожение.',
   goal: 'Сохранить аромат и свежесть, довести до стабильного розлива без дефектов.',
-  batch: { sugar: 180, alcohol: 0, pH: 3.1, ta: 8.5, malic: 3.8, yan: 125, freeSO2: 0, totalSO2: 0, temp: 22, va: 0.05, volumeL: 1000, phase: 'must' },
+  batch: { sugar: 180, alcohol: 0, pH: 3.1, ta: 8.5, malic: 3.8, yan: 125, freeSO2: 0, totalSO2: 0, temp: 22, va: 0.05, volumeL: 100, phase: 'must' },
   profile: { label: 'Мускат белый, сухое', color: 'white', dry: true, gPerPct: 16.8, so2Limit: 200, molTarget: 0.8 },
   stages: [
     {
@@ -719,7 +719,7 @@ const redAgeworthy: SimScenario = {
   intro:
     'У вас Каберне Совиньон под структурное красное для выдержки. Цель — глубокий цвет, зрелые танины и потенциал старения. Ключевые риски — зелёные танины при ранней уборке, переэкстракция, Brettanomyces в бочке и нестабильность из-за высокого pH.',
   goal: 'Получить сбалансированное танинное красное, стабильное и чистое, с потенциалом выдержки.',
-  batch: { sugar: 230, alcohol: 0, pH: 3.5, ta: 7, malic: 2.6, yan: 180, freeSO2: 0, totalSO2: 0, temp: 20, va: 0.05, volumeL: 1000, phase: 'must' },
+  batch: { sugar: 230, alcohol: 0, pH: 3.5, ta: 7, malic: 2.6, yan: 180, freeSO2: 0, totalSO2: 0, temp: 20, va: 0.05, volumeL: 100, phase: 'must' },
   profile: { label: 'Каберне Совиньон, сухое красное', color: 'red', dry: true, gPerPct: 18, so2Limit: 150, molTarget: 0.5 },
   stages: [
     {
@@ -1167,7 +1167,7 @@ const roseCabernet: SimScenario = {
   intro:
     'У вас Каберне Совиньон под сухое розе. Цель — бледно-розовый цвет, хрустящая свежесть, тонкий тиоловый аромат (грейпфрут, цитрус). До ~20 % планируется добавить Саперави — это сорт-краситель (тентюрье) с окрашенной мякотью, который даёт цвет без лишней экстракции танинов. Главные риски — окисление нежного сусла, потеря цвета и аромата, грубые танины из прессовых фракций.',
   goal: 'Получить свежее ароматное розе чистого бледно-розового цвета, стабильное к розливу.',
-  batch: { sugar: 200, alcohol: 0, pH: 3.15, ta: 8, malic: 3, yan: 170, freeSO2: 0, totalSO2: 0, temp: 18, va: 0.05, volumeL: 1000, phase: 'must' },
+  batch: { sugar: 200, alcohol: 0, pH: 3.15, ta: 8, malic: 3, yan: 170, freeSO2: 0, totalSO2: 0, temp: 18, va: 0.05, volumeL: 100, phase: 'must' },
   profile: { label: 'Розе Каберне + Саперави, сухое', color: 'rose', dry: true, gPerPct: 16.8, so2Limit: 200, molTarget: 0.8 },
   stages: [
     {
@@ -1704,7 +1704,7 @@ const orangeMuscat: SimScenario = {
   intro:
     'Вы делаете оранж — белое вино, сброженное и выдержанное на кожице, как красное. Мускат даёт яркую терпеновую ароматику, а добавка ~20 % Кокура (крымский нейтральный сорт с хорошей кислотностью и структурой) уравновешивает букет и держит свежесть. Цель — янтарный цвет, фенольная танинная текстура и сложность без агрессивной горечи и окислительных дефектов.',
   goal: 'Сбалансированный оранж: янтарный цвет, мягкая танинность, сложный аромат, чистота и стабильность.',
-  batch: { sugar: 205, alcohol: 0, pH: 3.25, ta: 6.8, malic: 2.8, yan: 175, freeSO2: 0, totalSO2: 0, temp: 20, va: 0.05, volumeL: 1000, phase: 'must' },
+  batch: { sugar: 205, alcohol: 0, pH: 3.25, ta: 6.8, malic: 2.8, yan: 175, freeSO2: 0, totalSO2: 0, temp: 20, va: 0.05, volumeL: 100, phase: 'must' },
   // Брожение на кожице: потери спирта как у красного
   profile: { label: 'Оранж Мускат + Кокур, сухое', color: 'orange', dry: true, gPerPct: 18, so2Limit: 200, molTarget: 0.6 },
   stages: [

@@ -14,7 +14,7 @@ export default function BentoniteCalc() {
   const [trials, setTrials] = useState<Trial[]>(
     PRESET_DOSES.map(dose => ({ dose, heatStable: false }))
   );
-  const [volume, setVolume] = useState('1000');
+  const [volume, setVolume] = useState('100');
   const [customDose, setCustomDose] = useState('');
   const uid = useId();
 

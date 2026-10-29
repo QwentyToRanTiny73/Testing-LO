@@ -13,6 +13,7 @@ import { flashcards } from '../data/flashcards';
 import { plural, lessonsLabel } from '../lib/plural';
 import CheckpointCard from '../components/course/CheckpointCard.astro';
 import { getStageById, type Checkpoint } from '../data/process';
+import { practiceByModule } from '../data/practice';
 
 interface LessonRef {
   title: string;
@@ -51,6 +52,7 @@ const base = import.meta.env.BASE_URL;
 // Related quizzes and flashcards for this module
 const moduleQuizCount = quizQuestions.filter(q => q.moduleId === lesson.data.module).length;
 const moduleCardCount = flashcards.filter(f => f.moduleId === lesson.data.module).length;
+const practice = practiceByModule[lesson.data.module] ?? [];
 
 const stage = module?.stage ? getStageById(module.stage) : undefined;
 const crossesModule = !!nextLesson && nextLesson.moduleId !== lesson.data.module;
@@ -223,6 +225,27 @@ const nextCourseHref = nextCourse
               )}
             </div>
           </div>
+        )}
+
+        <!-- Где применить урок на практике -->
+        {practice.length > 0 && (
+          <section class="mt-6" aria-labelledby="practice-title">
+            <p id="practice-title" class="text-sm font-medium text-stone-700 dark:text-stone-300 mb-3">Применить на практике:</p>
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {practice.map((p) => (
+                <li>
+                  <a href={`${base}${p.href}`}
+                    class="flex gap-3 h-full rounded-xl border border-stone-200 dark:border-stone-800 p-3 hover:border-wine-300 dark:hover:border-wine-700 transition-colors">
+                    <span class="text-xl" aria-hidden="true">{p.icon}</span>
+                    <span class="min-w-0">
+                      <span class="block text-sm font-medium text-stone-800 dark:text-stone-200">{p.label}</span>
+                      <span class="block text-xs text-stone-500 dark:text-stone-400">{p.hint}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         <!-- Контрольная точка на границе модулей -->

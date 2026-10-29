@@ -7,7 +7,7 @@ type Style = 'white' | 'red';
 export default function SugarCalc() {
   const [currentSugar, setCurrentSugar] = useState('200');
   const [targetSugar, setTargetSugar] = useState('220');
-  const [volumeL, setVolumeL] = useState('1000');
+  const [volumeL, setVolumeL] = useState('100');
   const [style, setStyle] = useState<Style>('white');
   const uid = useId();
 

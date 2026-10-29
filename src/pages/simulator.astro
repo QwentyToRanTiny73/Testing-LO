@@ -45,10 +45,9 @@ const course = getCourseById(COURSE_SIMULYATSIYA);
 
     <div class="mt-10 text-sm text-stone-500 dark:text-stone-400">
       <p>
-        Сценарии и логику решений можно редактировать в
-        <code class="text-xs bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">src/data/simulation.ts</code>.
         Тренажёр опирается на принципы из практикума и курса энологии — встретив незнакомый термин,
-        загляните в <a href={`${base}glossary`} class="text-emerald-700 dark:text-emerald-400 hover:underline">глоссарий</a>.
+        загляните в <a href={`${base}glossary`} class="text-emerald-700 dark:text-emerald-400 hover:underline">глоссарий</a>,
+        а дозы можно перепроверить в <a href={`${base}tools`} class="text-emerald-700 dark:text-emerald-400 hover:underline">калькуляторах</a>.
       </p>
       {course && (
         <p class="mt-2">
