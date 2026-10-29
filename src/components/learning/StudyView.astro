@@ -1,0 +1,96 @@
+---
+// Тело страницы флэш-карт. Используется общей страницей /study и страницами
+// модулей /study/<модуль>/ — отдельные статические адреса нужны потому, что
+// на статическом сайте строка запроса (?module=) при сборке всегда пуста.
+import FlashcardDeck from './FlashcardDeck';
+import { flashcards } from '../../data/flashcards';
+import { modules } from '../../data/modules';
+import { courses } from '../../data/courses';
+import { plural } from '../../lib/plural';
+
+interface Props {
+  moduleId?: string;
+}
+
+const { moduleId } = Astro.props as Props;
+const base = import.meta.env.BASE_URL;
+const activeModule = moduleId ? modules.find((m) => m.id === moduleId) : undefined;
+
+// Чипы модулей — в порядке курсов и модулей, как в программе обучения
+const courseOrder = new Map(courses.map((c) => [c.id, c.order]));
+const counts = new Map<string, number>();
+for (const c of flashcards) counts.set(c.moduleId, (counts.get(c.moduleId) || 0) + 1);
+const chips = modules
+  .filter((m) => counts.has(m.id))
+  .sort((a, b) => (courseOrder.get(a.course) ?? 9) - (courseOrder.get(b.course) ?? 9) || a.order - b.order);
+
+const deckCards = moduleId ? flashcards.filter((c) => c.moduleId === moduleId) : flashcards;
+const moduleTitles = Object.fromEntries(
+  modules.filter((m) => deckCards.some((c) => c.moduleId === m.id)).map((m) => [m.id, m.title]),
+);
+const chipBase = 'text-xs px-3 py-1.5 rounded-full border transition-colors';
+const chipOn = 'bg-wine-700 text-white border-wine-700';
+const chipOff = 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:border-wine-400';
+---
+
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+  <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6" aria-label="Хлебные крошки">
+    <a href={base} class="hover:text-wine-700">Главная</a>
+    <span aria-hidden="true">/</span>
+    {activeModule ? (
+      <>
+        <a href={`${base}study`} class="hover:text-wine-700">Флэш-карты</a>
+        <span aria-hidden="true">/</span>
+        <span class="text-stone-700 dark:text-stone-300">{activeModule.title}</span>
+      </>
+    ) : (
+      <span class="text-stone-700 dark:text-stone-300">Флэш-карты</span>
+    )}
+  </nav>
+
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">
+      🃏 {activeModule ? activeModule.title : 'Флэш-карты'}
+    </h1>
+    <p class="text-stone-500 dark:text-stone-400">
+      Интервальное повторение по алгоритму SM-2. Оценивайте знание — система покажет карточку в нужный момент.
+    </p>
+  </div>
+
+  <nav class="flex flex-wrap gap-2 mb-6" aria-label="Карточки по модулям">
+    <a href={`${base}study`} class={`${chipBase} ${!moduleId ? chipOn : chipOff}`} aria-current={!moduleId ? 'page' : undefined}>
+      Все ({flashcards.length})
+    </a>
+    {chips.map((mod) => (
+      <a
+        href={`${base}study/${mod.id}`}
+        class={`${chipBase} ${moduleId === mod.id ? chipOn : chipOff}`}
+        aria-current={moduleId === mod.id ? 'page' : undefined}
+      >
+        {mod.icon} {mod.title.split(':')[0]} ({counts.get(mod.id)})
+      </a>
+    ))}
+  </nav>
+
+  {activeModule && (
+    <div class="rounded-lg bg-wine-50 dark:bg-wine-950/30 border border-wine-200 dark:border-wine-800 p-3 mb-6 text-sm text-wine-800 dark:text-wine-300 flex flex-wrap items-center justify-between gap-2">
+      <span>
+        {deckCards.length} {plural(deckCards.length, ['карточка', 'карточки', 'карточек'])} по модулю
+      </span>
+      <a href={`${base}course/${activeModule.id}`} class="font-medium hover:underline">← К урокам модуля</a>
+    </div>
+  )}
+
+  <div class="rounded-xl border border-stone-200 dark:border-stone-800 p-4 mb-6 text-xs text-stone-500 dark:text-stone-400">
+    <div class="font-medium text-stone-600 dark:text-stone-300 mb-1">Как работает интервальное повторение:</div>
+    Оцените своё знание: <span class="text-red-600 font-medium">Не знаю</span> → повтор сегодня ·
+    <span class="text-orange-600 font-medium">Трудно</span> → завтра ·
+    <span class="text-blue-600 font-medium">Знаю</span> → через 6 дней ·
+    <span class="text-green-600 font-medium">Легко</span> → через ~2 недели.
+    Интервалы растут по мере запоминания.
+  </div>
+
+  <div class="card">
+    <FlashcardDeck client:load cards={deckCards} moduleFilter={moduleId} moduleTitles={moduleTitles} />
+  </div>
+</div>

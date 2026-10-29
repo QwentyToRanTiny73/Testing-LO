@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import QuizView from '../../components/learning/QuizView.astro';
+import { quizQuestions } from '../../data/quizzes';
+import { getModuleById } from '../../data/modules';
+
+export function getStaticPaths() {
+  const ids = [...new Set(quizQuestions.map((q) => q.moduleId))];
+  return ids.filter((id) => getModuleById(id)).map((id) => ({ params: { module: id } }));
+}
+
+const { module: moduleId } = Astro.params;
+const mod = getModuleById(moduleId!)!;
+---
+
+<BaseLayout title={`Квиз: ${mod.title}`} description={`Проверка знаний по модулю «${mod.title}»`}>
+  <QuizView moduleId={moduleId} />
+</BaseLayout>
