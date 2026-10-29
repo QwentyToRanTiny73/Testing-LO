@@ -141,9 +141,16 @@ export function bentoniteKg(volumeL: number, doseGhL: number): number {
 
 export type Accuracy = 'exact' | 'close' | 'off';
 
-/** Оценка введённого значения относительно расчётного: ±10 % — точно, ±30 % — приемлемо. */
-export function gradeAnswer(entered: number, expected: number, exactTol = 0.1, closeTol = 0.3): Accuracy {
-  if (!Number.isFinite(entered) || expected <= 0) return 'off';
-  const rel = Math.abs(entered - expected) / expected;
-  return rel <= exactTol ? 'exact' : rel <= closeTol ? 'close' : 'off';
+/**
+ * Оценка введённого значения относительно расчётного: ±10 % — точно, ±30 % — приемлемо.
+ * absTol — допуск в абсолютных единицах для малых доз: когда расчёт сам меньше точности
+ * анализа (свободный SO₂ меряют с погрешностью ~2 мг/л), процентный допуск теряет смысл.
+ */
+export function gradeAnswer(entered: number, expected: number, exactTol = 0.1, closeTol = 0.3, absTol = 0): Accuracy {
+  if (!Number.isFinite(entered)) return 'off';
+  const target = Math.max(expected, 0);
+  const diff = Math.abs(entered - target);
+  if (diff <= Math.max(exactTol * target, absTol)) return 'exact';
+  if (diff <= Math.max(closeTol * target, 2 * absTol)) return 'close';
+  return 'off';
 }
