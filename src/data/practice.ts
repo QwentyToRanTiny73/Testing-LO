@@ -16,7 +16,7 @@ const brixCalc: PracticeLink = { icon: '📏', label: 'Конвертер Brix',
 const macerationCalc: PracticeLink = { icon: '🍇', label: 'Калькулятор мацерации', href: 'tools#maceration', hint: 'дни мацерации по сорту, стилю и температуре' };
 const bentoniteCalc: PracticeLink = { icon: '🏺', label: 'Пробная оклейка бентонитом', href: 'tools#bentonite', hint: 'доза по результату пробной оклейки' };
 const vesselCalc: PracticeLink = { icon: '🛢️', label: 'Парк ёмкостей', href: 'tools#vessel-park', hint: 'объём мезги и сусла от массы винограда' };
-const harvest: PracticeLink = { icon: '📅', label: 'Планировщик урожая', href: 'harvest', hint: 'лоты и этапы переработки сезона' };
+const harvest: PracticeLink = { icon: '📅', label: 'Планировщик урожая', href: 'harvest', hint: 'схемы переработки с датами под вашу партию' };
 const simulator: PracticeLink = { icon: '🎮', label: 'Симулятор', href: 'simulator', hint: 'те же решения на партии с паспортом и последствиями' };
 
 export const practiceByModule: Record<string, PracticeLink[]> = {

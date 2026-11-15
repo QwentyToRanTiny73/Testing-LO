@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { HarvestLot, HarvestStage } from '../../data/harvest2026';
+import { useState, useEffect, useId } from 'react';
+import type { HarvestLot, HarvestStage } from '../../data/harvest';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -12,11 +12,30 @@ const TOOL_LINKS: Record<string, { label: string; href: string }> = {
   brix:       { label: '→ Конвертер Brix', href: `${BASE_URL}tools#brix` },
 };
 
-function StageItem({ stage, lotId, onToggle, completed }: {
+/** Свои параметры партии: дата сбора (ГГГГ-ММ-ДД) и объём */
+interface LotSettings {
+  harvestDate: string;
+  volumeL: string;
+}
+
+const DATE_FMT = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
+
+/** Когда начинается этап: дата, если задан день сбора, иначе смещение от него */
+function stageWhen(offset: number, harvestDate: string): string {
+  const base = harvestDate ? new Date(`${harvestDate}T00:00:00`) : null;
+  if (base && !Number.isNaN(base.getTime())) {
+    base.setDate(base.getDate() + offset);
+    return DATE_FMT.format(base);
+  }
+  return offset === 0 ? 'в день сбора' : `день сбора + ${offset}`;
+}
+
+function StageItem({ stage, lotId, onToggle, completed, harvestDate }: {
   stage: HarvestStage;
   lotId: string;
   onToggle: (key: string) => void;
   completed: boolean;
+  harvestDate: string;
 }) {
   const key = `${lotId}__${stage.id}`;
   return (
@@ -39,8 +58,11 @@ function StageItem({ stage, lotId, onToggle, completed }: {
           {stage.title}
         </div>
         {!completed && <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{stage.description}</p>}
-        {stage.estimatedDate && !completed && (
-          <div className="text-xs text-stone-400 mt-1">📅 Ориентир: {stage.estimatedDate}</div>
+        {stage.dayOffset != null && !completed && (
+          <div className="text-xs text-stone-400 mt-1">
+            📅 Ориентир: {stageWhen(stage.dayOffset, harvestDate)}
+            {stage.durationDays ? ` · ~${stage.durationDays} дн.` : ''}
+          </div>
         )}
         {stage.tools && stage.tools.length > 0 && !completed && (
           <div className="flex flex-wrap gap-2 mt-1.5">
@@ -64,14 +86,36 @@ function LotCard({ lot }: { lot: HarvestLot }) {
   const [open, setOpen] = useState(false);
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
 
+  const [settings, setSettings] = useState<LotSettings>({ harvestDate: '', volumeL: String(lot.defaultVolumeL) });
+  const uid = useId();
+
   const storageKey = `harvest-${lot.id}`;
+  const settingsKey = `harvest-settings-${lot.id}`;
 
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
       setCompleted(stored);
     } catch {}
-  }, [storageKey]);
+    try {
+      const stored = JSON.parse(localStorage.getItem(settingsKey) || 'null');
+      if (stored) setSettings((prev) => ({ ...prev, ...stored }));
+    } catch {}
+  }, [storageKey, settingsKey]);
+
+  function updateSettings(patch: Partial<LotSettings>) {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      try {
+        localStorage.setItem(settingsKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }
+
+  const volume = parseFloat(settings.volumeL);
+  const volumeLabel = Number.isFinite(volume) && volume > 0 ? `${volume} л` : 'объём не задан';
+  const harvestLabel = settings.harvestDate ? `сбор ${stageWhen(0, settings.harvestDate)}` : 'дата сбора не задана';
 
   function toggle(key: string) {
     setCompleted(prev => {
@@ -111,7 +155,7 @@ function LotCard({ lot }: { lot: HarvestLot }) {
               <div className="h-1.5 bg-stone-200 dark:bg-stone-700 rounded-full overflow-hidden">
                 <div className="h-full bg-wine-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
               </div>
-              <div className="text-xs text-stone-400 mt-1">{pct}% завершено · сбор ~{lot.estimatedHarvestDate} · ~{lot.estimatedVolumeL} л</div>
+              <div className="text-xs text-stone-400 mt-1">{pct}% завершено · {harvestLabel} · {volumeLabel}</div>
             </div>
           </div>
         </div>
@@ -120,6 +164,19 @@ function LotCard({ lot }: { lot: HarvestLot }) {
       {open && (
         <div className="border-t border-stone-100 dark:border-stone-800 p-5 space-y-4">
           <p className="text-sm text-stone-600 dark:text-stone-400">{lot.description}</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label" htmlFor={`${uid}-date`}>Дата сбора вашей партии</label>
+              <input id={`${uid}-date`} type="date" className="input" value={settings.harvestDate}
+                onChange={(e) => updateSettings({ harvestDate: e.target.value })} />
+            </div>
+            <div>
+              <label className="label" htmlFor={`${uid}-volume`}>Объём партии (л)</label>
+              <input id={`${uid}-volume`} type="number" className="input" min={1} value={settings.volumeL}
+                onChange={(e) => updateSettings({ volumeL: e.target.value })} />
+            </div>
+          </div>
 
           {lot.splitInfo && (
             <div className="rounded-lg bg-wine-50 dark:bg-wine-950/30 border border-wine-200 dark:border-wine-800 p-3 text-sm text-wine-800 dark:text-wine-300">
@@ -137,6 +194,7 @@ function LotCard({ lot }: { lot: HarvestLot }) {
                   lotId={lot.id}
                   onToggle={toggle}
                   completed={!!completed[`${lot.id}__${stage.id}`]}
+                  harvestDate={settings.harvestDate}
                 />
               ))}
             </div>
@@ -175,7 +233,7 @@ export default function HarvestPlanner({ lots }: { lots: HarvestLot[] }) {
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
             ${filter === 'all' ? 'bg-wine-700 text-white' : 'btn-secondary'}`}
         >
-          Все лоты ({lots.length})
+          Все схемы ({lots.length})
         </button>
         {lots.map(lot => (
           <button
@@ -198,8 +256,11 @@ export default function HarvestPlanner({ lots }: { lots: HarvestLot[] }) {
       <div className="text-right">
         <button
           onClick={() => {
-            if (confirm('Сбросить прогресс всех лотов?')) {
-              lots.forEach(lot => localStorage.removeItem(`harvest-${lot.id}`));
+            if (confirm('Сбросить отметки, даты и объёмы всех схем?')) {
+              lots.forEach(lot => {
+                localStorage.removeItem(`harvest-${lot.id}`);
+                localStorage.removeItem(`harvest-settings-${lot.id}`);
+              });
               window.location.reload();
             }
           }}

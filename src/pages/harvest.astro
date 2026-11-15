@@ -1,11 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import HarvestPlanner from '../components/calculators/HarvestPlanner';
-import { harvestLots } from '../data/harvest2026';
+import { harvestLots } from '../data/harvest';
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="Планировщик урожая 2026" description="Интерактивный планировщик партий урожая 2026 с чек-листами обработок">
+<BaseLayout title="Планировщик урожая" description="Типовые схемы переработки винограда с чек-листами: задайте дату сбора и объём своей партии">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <nav class="flex items-center gap-2 text-sm text-stone-500 mb-6">
       <a href={base} class="hover:text-wine-700">Главная</a>
@@ -14,10 +14,10 @@ const base = import.meta.env.BASE_URL;
     </nav>
 
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">🌿 Планировщик урожая 2026</h1>
+      <h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">🌿 Планировщик урожая</h1>
       <p class="text-stone-500 dark:text-stone-400 mb-4">
-        Интерактивный чек-лист обработки для каждого лота. Прогресс сохраняется в браузере.
-        Данные партий редактируются в <code class="text-xs bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">src/data/harvest2026.ts</code>.
+        Типовые схемы переработки по типам сортов. Откройте схему, задайте дату сбора и объём своей партии —
+        этапы получат ориентировочные даты. Отметки, даты и объёмы сохраняются в вашем браузере.
       </p>
 
       <!-- Summary cards -->
@@ -27,13 +27,13 @@ const base = import.meta.env.BASE_URL;
             <div class="text-xl mb-1">{lot.icon}</div>
             <div class="text-xs font-medium text-stone-700 dark:text-stone-300">{lot.variety}</div>
             <div class="text-xs text-stone-400 mt-0.5">{lot.style.split('(')[0].trim()}</div>
-            <div class="text-xs text-stone-400">{lot.estimatedVolumeL} л</div>
+            <div class="text-xs text-stone-400">{lot.stages.length} этапов</div>
           </div>
         ))}
       </div>
 
       <div class="rounded-xl border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-amber-800 dark:text-amber-200">
-        <strong>Ориентир:</strong> все даты и объёмы — плановые оценки. Реальный график корректируется по погоде, фенологии и ресурсам предприятия.
+        <strong>Ориентир:</strong> сроки этапов — типовые оценки. Реальный график корректируется по погоде, фенологии и ресурсам предприятия.
       </div>
     </div>
 
