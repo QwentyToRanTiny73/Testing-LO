@@ -96,7 +96,7 @@ export const mindMaps: Record<string, MindNode> = {
         id: 'dr-selection',
         label: 'Выбор штамма',
         children: [
-          { id: 'dr-magarach', label: 'Магарач 47-К (белые, красные)', href: `${BASE}course/drozhzhi/01-kulturnye-drozhzhi` },
+          { id: 'dr-magarach', label: 'Раса 47-К (белые, красные)', href: `${BASE}course/drozhzhi/01-kulturnye-drozhzhi` },
           { id: 'dr-feodosiya', label: 'Феодосия-1-19' },
           { id: 'dr-aroma', label: 'Ароматические (Мускат → Lalvin 71B)' },
         ],
