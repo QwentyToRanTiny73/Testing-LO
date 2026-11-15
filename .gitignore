@@ -13,6 +13,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Личная часть симулятора: только локально, в закрытой сборке (SIM_PRIVATE=1)
+src/data/private/
+
 # Environment variables
 .env
 .env.local

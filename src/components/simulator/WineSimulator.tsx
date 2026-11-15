@@ -10,6 +10,7 @@ import {
   type MetricKey,
 } from '../../data/simulation';
 import { ReagentChips, ReagentDialog } from './ReagentInfo';
+import { REAGENTS } from '../../data/reagents';
 import {
   VINTAGES,
   pickVintage,
@@ -27,6 +28,8 @@ import { gradeAnswer, type Accuracy } from '../../lib/enology';
 import { plural } from '../../lib/plural';
 
 const BASE_URL = import.meta.env.BASE_URL;
+/** Справочник показываем, только когда в нём больше одной позиции */
+const HAS_REFERENCE = REAGENTS.length > 1;
 /** Высота липкой шапки сайта плюс зазор */
 const HEADER_OFFSET = 80;
 
@@ -114,20 +117,12 @@ const NOTE_TEXT: Record<
     structMid: 'Структура потоков средняя — без провалов, но и без блеска.',
     structLow: 'Телу и структуре потоков не хватает наполненности.',
   },
-  season: {
-    aromaHigh: 'Мускат узнаётся сортово, но без парфюмного перебора — задача сезона решена; Кокур держит фон.',
-    aromaLow: 'Ароматика сезона потеряна: Мускат либо задавлен, либо ушёл в парфюмность, которую нечем разбавить.',
-    freshHigh: 'Кислотный профиль розе близок к эталону 2025 года — свежесть на месте по всем партиям.',
-    structHigh: 'Цвет розе держится вишнёво-розовым, красное собрано дубом, Мускат получил объём на осадке.',
-    structMid: 'Структура и цвет в рабочем коридоре, но до эталона партии не дотянули.',
-    structLow: 'Цвет розе бледный, красное пустое — по структуре сезон не состоялся.',
-  },
 };
 
 // Дегустационная заметка из уровней метрик
 function tastingNote(scenario: SimScenario, m: Metrics, faults: string[]): string[] {
   const notes: string[] = [];
-  const t = NOTE_TEXT[scenario.noteStyle];
+  const t = scenario.noteText ?? NOTE_TEXT[scenario.noteStyle];
 
   if (m.aroma >= 75) notes.push(t.aromaHigh);
   else if (m.aroma >= 55) notes.push('Аромат приятный, но сдержанный — раскрывается не полностью.');
@@ -419,11 +414,12 @@ function ScenarioPicker({
         })}
       </div>
 
+      {HAS_REFERENCE && (
       <div className="mt-6 rounded-xl border border-stone-200 dark:border-stone-800 p-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-stone-800 dark:text-stone-200">Справочник препаратов сезона</div>
+          <div className="text-sm font-medium text-stone-800 dark:text-stone-200">Справочник препаратов</div>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Дрожжи, активаторы, ферменты, метабисульфит и дубовая щепа — дозы, момент внесения и несовместимости.
+            Дрожжи, активаторы, ферменты, сульфитация, оклейка — дозы, момент внесения и несовместимости.
           </p>
         </div>
         <button
@@ -435,6 +431,7 @@ function ScenarioPicker({
           📋 Открыть справочник
         </button>
       </div>
+      )}
     </div>
   );
 }
@@ -1019,15 +1016,17 @@ export default function WineSimulator() {
             </div>
           )}
           <div>
-            <button
-              onClick={() => setReagentDialog({ id: null })}
-              className="w-full text-xs font-medium px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700
-                text-stone-600 dark:text-stone-300 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-400
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
-            >
-              📋 Справочник препаратов
-            </button>
-            <button onClick={reset} className="mt-3 text-xs text-stone-400 hover:text-red-500 transition-colors">
+            {HAS_REFERENCE && (
+              <button
+                onClick={() => setReagentDialog({ id: null })}
+                className="w-full mb-3 text-xs font-medium px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700
+                  text-stone-600 dark:text-stone-300 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-400
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
+              >
+                📋 Справочник препаратов
+              </button>
+            )}
+            <button onClick={reset} className="text-xs text-stone-400 hover:text-red-500 transition-colors">
               ← Выйти к выбору сценария
             </button>
           </div>

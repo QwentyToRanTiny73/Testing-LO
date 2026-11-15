@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { REAGENTS, REAGENT_CATEGORIES, getReagent, type Reagent } from '../../data/reagents';
+import { REAGENTS, REAGENTS_NOTE, REAGENT_CATEGORIES, getReagent, type Reagent } from '../../data/reagents';
 
 /** Кликабельные чипы-сноски на препараты этапа или варианта выбора. */
 export function ReagentChips({
@@ -86,8 +86,8 @@ function DetailView({ reagent, onBack }: { reagent: Reagent; onBack?: () => void
       )}
 
       <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-4">
-        Дозы приведены как ориентиры технологической методички и предварительны до анализа сусла (сахар, pH, титруемая кислотность, YAN).
-        Рекомендованные дозы Subliprotect, PROVGREEN, Viazym Clarif One и Viazym MP не подтверждены по техническим листам изготовителя.
+        {REAGENTS_NOTE ??
+          'Дозы — ориентиры, предварительные до анализа сусла (сахар, pH, титруемая кислотность, YAN). Сверяйтесь с технической картой производителя.'}
       </p>
     </div>
   );
@@ -105,9 +105,9 @@ function Field({ label, value }: { label: string; value: string }) {
 function ListView({ onSelect }: { onSelect: (id: string) => void }) {
   return (
     <div>
-      <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100">Справочник препаратов сезона</h3>
+      <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100">Справочник препаратов</h3>
       <p className="text-sm text-stone-500 dark:text-stone-400 mt-1 mb-4">
-        Закупка сезона и препараты методички. Нажмите на позицию, чтобы увидеть дозу, момент внесения и несовместимости.
+        Нажмите на позицию, чтобы увидеть дозу, момент внесения и несовместимости.
       </p>
       <div className="space-y-5">
         {REAGENT_CATEGORIES.map((cat) => {
@@ -209,7 +209,7 @@ export function ReagentDialog({ initialId, onClose }: { initialId: string | null
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={reagent ? `Препарат: ${reagent.name}` : 'Справочник препаратов сезона'}
+      aria-label={reagent ? `Препарат: ${reagent.name}` : 'Справочник препаратов'}
     >
       <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
