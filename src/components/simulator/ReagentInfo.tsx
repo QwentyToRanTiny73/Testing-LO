@@ -44,7 +44,7 @@ function DetailView({ reagent, onBack }: { reagent: Reagent; onBack?: () => void
           onClick={onBack}
           className="text-xs text-stone-500 dark:text-stone-400 hover:text-emerald-700 dark:hover:text-emerald-400 mb-3 transition-colors"
         >
-          ← Все препараты сезона
+          ← Все препараты
         </button>
       )}
 

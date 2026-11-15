@@ -98,7 +98,7 @@ export const mindMaps: Record<string, MindNode> = {
         children: [
           { id: 'dr-magarach', label: 'Раса 47-К (белые, красные)', href: `${BASE}course/drozhzhi/01-kulturnye-drozhzhi` },
           { id: 'dr-feodosiya', label: 'Феодосия-1-19' },
-          { id: 'dr-aroma', label: 'Ароматические (Мускат → Lalvin 71B)' },
+          { id: 'dr-aroma', label: 'Ароматические штаммы (для терпеновых сортов)' },
         ],
       },
       {
@@ -107,7 +107,7 @@ export const mindMaps: Record<string, MindNode> = {
         children: [
           { id: 'dr-yan', label: 'YAN: усвояемый азот', href: `${BASE}course/drozhzhi/02-azot-pitanie` },
           { id: 'dr-dap', label: 'DAP: диаммоний фосфат (неорган.)' },
-          { id: 'dr-organic', label: 'Органический азот (Fermaid O)' },
+          { id: 'dr-organic', label: 'Органический азот (автолизаты дрожжей)' },
           { id: 'dr-h2s', label: 'Дефицит YAN → H₂S' },
         ],
       },

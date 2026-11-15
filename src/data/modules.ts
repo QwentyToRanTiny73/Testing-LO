@@ -26,7 +26,7 @@ export const modules: Module[] = [
   {
     id: 'fermenty',
     title: 'Ферментные препараты',
-    description: 'Пектолитические ферменты, β-глюканазы, ассортимент Martin Vialatte; дозы, температурные окна, ингибирование.',
+    description: 'Пектолитические ферменты, β-глюканазы; дозы, температурные окна, ингибирование.',
     icon: '🧪',
     order: 5,
     course: COURSE_PRAKTIKUM,

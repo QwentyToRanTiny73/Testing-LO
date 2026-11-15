@@ -202,6 +202,7 @@ const whiteAromatic: SimScenario = {
         { label: 'Цель', value: 'минимум контакта с O₂' },
       ],
       question: 'Как ведёте приёмку и прессование?',
+      reagents: ['metabisulfite', 'gsh-yeast'],
       choices: [
         {
           id: 'protect',
@@ -245,6 +246,7 @@ const whiteAromatic: SimScenario = {
         { label: 'Связанные терпены', value: 'большой резерв гликозидов' },
       ],
       question: 'Какую ферментную стратегию выбираете?',
+      reagents: ['enzyme-pectolytic', 'enzyme-glucosidase'],
       choices: [
         {
           id: 'pecto-then-gluco',
@@ -326,6 +328,7 @@ const whiteAromatic: SimScenario = {
         { label: 'Потенц. спирт', value: '≈{potential} % об.' },
       ],
       question: 'Какую стратегию брожения выбираете?',
+      reagents: ['yeast-aromatic', 'nutrient-organic', 'dap'],
       choices: [
         {
           id: 'aromatic-strain',
@@ -409,6 +412,7 @@ const whiteAromatic: SimScenario = {
         { label: 'Яблочная кислота', value: '{malic} г/л' },
       ],
       question: 'Что делаете с ЯМБ?',
+      reagents: ['metabisulfite', 'lysozyme'],
       choices: [
         {
           id: 'block',
@@ -449,6 +453,7 @@ const whiteAromatic: SimScenario = {
       context:
         'Короткая выдержка на тонком дрожжевом осадке (sur lie) добавляет телу и стабильности за счёт маннопротеинов и глутатиона — но требует управления.',
       question: 'Как ведёте выдержку перед обработками?',
+      reagents: ['enzyme-glucanase'],
       choices: [
         {
           id: 'sur-lie',
@@ -484,14 +489,15 @@ const whiteAromatic: SimScenario = {
       id: 'pvpp',
       phase: 'Подготовка к стабилизации',
       icon: '🧰',
-      title: 'Оклейка ПВПП (Полигрин)',
+      title: 'Оклейка ПВПП',
       context:
-        'Перед белковой стабилизацией бентонитом полезно отполировать фенольный профиль. ПВПП (поливинилполипирролидон, торговые марки Polyclar/Полигрин) избирательно адсорбирует низкомолекулярные фенолы и катехины — снижает горечь, убирает склонность к побурению и «розовению» (pinking). ПВПП нерастворим, действует за минуты и обязательно отфильтровывается.',
+        'Перед белковой стабилизацией бентонитом полезно отполировать фенольный профиль. ПВПП (поливинилполипирролидон) избирательно адсорбирует низкомолекулярные фенолы и катехины — снижает горечь, убирает склонность к побурению и «розовению» (pinking). ПВПП нерастворим, действует за минуты и обязательно отфильтровывается.',
       data: [
         { label: 'Лёгкое побурение', value: 'есть склонность' },
         { label: 'Доза ПВПП (OIV)', value: 'до 80 г/гл — ориентир' },
       ],
       question: 'Применять ли ПВПП и в какой последовательности с бентонитом?',
+      reagents: ['pvpp', 'bentonite'],
       choices: [
         {
           id: 'pvpp-then-bentonite',
@@ -535,6 +541,7 @@ const whiteAromatic: SimScenario = {
         { label: 'Тартраты', value: 'нестабильны' },
       ],
       question: 'Как стабилизируете?',
+      reagents: ['bentonite', 'cmc', 'metatartaric'],
       choices: [
         {
           id: 'trial-bentonite',
@@ -694,6 +701,7 @@ const redAgeworthy: SimScenario = {
         { label: 'Санитария', value: 'хорошая' },
       ],
       question: 'Как готовите мезгу к брожению?',
+      reagents: ['metabisulfite', 'yeast-red', 'tannin'],
       choices: [
         {
           id: 'destem-clean',
@@ -733,6 +741,7 @@ const redAgeworthy: SimScenario = {
       context:
         'До старта брожения можно поработать с экстракцией цвета и аромата. Этанола ещё нет — экстрагируются водорастворимые антоцианы и ароматика.',
       question: 'Что делаете перед брожением?',
+      reagents: ['enzyme-maceration'],
       choices: [
         {
           id: 'cold-soak',
@@ -816,6 +825,7 @@ const redAgeworthy: SimScenario = {
         { label: 'pH', value: '{pH}' },
       ],
       question: 'Как поступаете с ЯМБ?',
+      reagents: ['oenococcus', 'metabisulfite'],
       choices: [
         {
           id: 'do-mlf',
@@ -856,6 +866,7 @@ const redAgeworthy: SimScenario = {
       context:
         'Вино уходит на выдержку. Контролируемый доступ кислорода полимеризует танины и стабилизирует цвет; дуб добавляет структуру и аромат — но и то и другое легко передозировать.',
       question: 'Как организуете выдержку?',
+      reagents: ['oak-chips'],
       choices: [
         {
           id: 'balanced-oak',
@@ -899,6 +910,7 @@ const redAgeworthy: SimScenario = {
         { label: 'Погреб', value: 'тёплый, бочки' },
       ],
       question: 'Как управляете риском Brett?',
+      reagents: ['metabisulfite', 'chitosan'],
       choices: [
         {
           id: 'so2-hygiene',
@@ -942,6 +954,7 @@ const redAgeworthy: SimScenario = {
         { label: 'Тартраты', value: 'нестабильны' },
       ],
       question: 'Как готовите вино к розливу?',
+      reagents: ['albumin'],
       choices: [
         {
           id: 'gentle-fining',
@@ -1225,6 +1238,7 @@ const roseCabernet: SimScenario = {
         { label: 'Риск', value: 'окисление, потеря цвета' },
       ],
       question: 'Как обрабатываете и осветляете сусло?',
+      reagents: ['enzyme-pectolytic', 'metabisulfite', 'gsh-yeast'],
       choices: [
         {
           id: 'protect-enzyme',
@@ -1267,6 +1281,7 @@ const roseCabernet: SimScenario = {
         { label: 'YAN', value: '{yan} мг/л' },
       ],
       question: 'Какой штамм и питание выбираете?',
+      reagents: ['yeast-thiol', 'nutrient-organic', 'dap'],
       choices: [
         {
           id: 'thiol-strain',
@@ -1349,6 +1364,7 @@ const roseCabernet: SimScenario = {
         { label: 'Яблочная кислота', value: '{malic} г/л' },
       ],
       question: 'Что делаете с ЯМБ?',
+      reagents: ['metabisulfite', 'lysozyme'],
       choices: [
         {
           id: 'block',
@@ -1384,14 +1400,15 @@ const roseCabernet: SimScenario = {
       id: 'pvpp',
       phase: 'Стабилизация цвета',
       icon: '🧰',
-      title: 'Оклейка ПВПП (Полигрин)',
+      title: 'Оклейка ПВПП',
       context:
-        'Розовый цвет нестабилен: окисляемые фенолы со временем дают побурение и «оранжевение». ПВПП (Полигрин) избирательно адсорбирует именно эти низкомолекулярные фенолы и катехины, стабилизируя свежий розовый тон и убирая горечь. Действует за минуты, нерастворим, отфильтровывается.',
+        'Розовый цвет нестабилен: окисляемые фенолы со временем дают побурение и «оранжевение». ПВПП избирательно адсорбирует именно эти низкомолекулярные фенолы и катехины, стабилизируя свежий розовый тон и убирая горечь. Действует за минуты, нерастворим, отфильтровывается.',
       data: [
         { label: 'Цвет', value: 'бледно-розовый, надо сохранить' },
         { label: 'Доза ПВПП', value: '20–50 г/гл — ориентир' },
       ],
       question: 'Применять ли ПВПП?',
+      reagents: ['pvpp'],
       choices: [
         {
           id: 'pvpp-trial',
@@ -1435,6 +1452,7 @@ const roseCabernet: SimScenario = {
         { label: 'Доза бентонита', value: '20–100 г/гл по пробе' },
       ],
       question: 'Как ведёте белковую стабилизацию?',
+      reagents: ['bentonite'],
       choices: [
         {
           id: 'trial-bentonite',
@@ -1478,6 +1496,7 @@ const roseCabernet: SimScenario = {
         { label: 'Методы', value: 'холод, КМЦ, электродиализ' },
       ],
       question: 'Как стабилизируете тартраты?',
+      reagents: ['cmc', 'metatartaric'],
       choices: [
         {
           id: 'cmc-or-cold',
@@ -1569,6 +1588,7 @@ const roseCabernet: SimScenario = {
         { label: 'Цель TPO', value: '< 1 мг/л' },
       ],
       question: 'Как проводите розлив?',
+      reagents: ['gum-arabic'],
       audit: true,
       choices: [
         {
@@ -1722,6 +1742,7 @@ const orangeMuscat: SimScenario = {
         { label: 'Нюанс', value: 'SO₂ тормозит глюкозидазу' },
       ],
       question: 'Как задаёте ферменты и SO₂ на старте?',
+      reagents: ['enzyme-glucosidase', 'metabisulfite'],
       choices: [
         {
           id: 'enzyme-low-so2',
@@ -1854,6 +1875,7 @@ const orangeMuscat: SimScenario = {
         { label: 'Кислотный запас', value: 'есть (Кокур)' },
       ],
       question: 'Как поступаете с ЯМБ?',
+      reagents: ['oenococcus', 'metabisulfite'],
       choices: [
         {
           id: 'do-mlf',
@@ -1930,14 +1952,15 @@ const orangeMuscat: SimScenario = {
       id: 'pvpp',
       phase: 'Подготовка к розливу',
       icon: '🧰',
-      title: 'Оклейка ПВПП (Полигрин) — полировка горечи',
+      title: 'Оклейка ПВПП — полировка горечи',
       context:
-        'В оранже фенольная горечь — часть стиля, но её избыток мешает. ПВПП (Полигрин) избирательно убирает самые горькие низкомолекулярные фенолы и катехины, не оголяя вино полностью. Доза для оранжа должна быть скромной: переусердствовать — значит убрать характер.',
+        'В оранже фенольная горечь — часть стиля, но её избыток мешает. ПВПП избирательно убирает самые горькие низкомолекулярные фенолы и катехины, не оголяя вино полностью. Доза для оранжа должна быть скромной: переусердствовать — значит убрать характер.',
       data: [
         { label: 'Горечь', value: 'умеренно избыточна' },
         { label: 'Доза ПВПП', value: '20–30 г/гл — ориентир' },
       ],
       question: 'Применять ли ПВПП и как?',
+      reagents: ['pvpp'],
       choices: [
         {
           id: 'light-pvpp',
@@ -1978,6 +2001,7 @@ const orangeMuscat: SimScenario = {
         { label: 'Холодовой тест', value: 'нестабилен (тартраты)' },
       ],
       question: 'Как стабилизируете оранж?',
+      reagents: ['bentonite', 'cmc'],
       choices: [
         {
           id: 'test-driven',
@@ -2382,6 +2406,7 @@ const customCrush: SimScenario = {
         { label: 'Разбавление до 10 %', value: 'регулируется законом (контекст)' },
       ],
       question: 'Что делаете с высокой сахаристостью?',
+      reagents: ['yeast-robust', 'rehydration-protector', 'nutrient-organic'],
       choices: [
         {
           id: 'manage-fermentation',
@@ -2427,6 +2452,7 @@ const customCrush: SimScenario = {
         { label: 'Цель', value: 'умеренная мутность (~100–150 NTU)' },
       ],
       question: 'Как осветляете белые и розе?',
+      reagents: ['enzyme-pectolytic'],
       choices: [
         {
           id: 'cold-settle',
@@ -2468,6 +2494,7 @@ const customCrush: SimScenario = {
         { label: 'Ограничение', value: 'мощность холода' },
       ],
       question: 'Как управляете стартами и температурой?',
+      reagents: ['yeast-aromatic', 'yeast-red'],
       choices: [
         {
           id: 'stagger',
@@ -2553,6 +2580,7 @@ const customCrush: SimScenario = {
         { label: 'Мускат', value: 'блок ЯМБ (SO₂ 30–40 мг/л)' },
       ],
       question: 'Как ведёте ЯМБ в кампании?',
+      reagents: ['oenococcus', 'metabisulfite'],
       choices: [
         {
           id: 'split-mlf',
@@ -2639,6 +2667,7 @@ const customCrush: SimScenario = {
         { label: 'Холод', value: '−4 °C, ≥7 дней' },
       ],
       question: 'Как стабилизируете белые и розе?',
+      reagents: ['bentonite', 'gum-arabic'],
       choices: [
         {
           id: 'trial-full',
