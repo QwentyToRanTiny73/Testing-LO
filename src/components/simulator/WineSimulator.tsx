@@ -160,6 +160,14 @@ const VINTAGE_OPTIONS: { id: VintageChoice; label: string; icon: string; descrip
   ...VINTAGES,
 ];
 
+/** Масштаб партии: от него зависят навески на этапах с расчётом дозы */
+const SCALES = [
+  { id: 'small', label: '100 л', volumeL: 100, hint: 'Бочонок или бутыль: навески в граммах, цена ошибки в полграмма.' },
+  { id: 'tonne', label: '1 т винограда', volumeL: 650, hint: 'Около 650 л: типичная партия малого хозяйства.' },
+  { id: 'ten', label: '10 т винограда', volumeL: 6500, hint: 'Около 6500 л: промышленный танк, навески в сотнях граммов.' },
+] as const;
+type ScaleId = (typeof SCALES)[number]['id'];
+
 const fmt = (x: number, d = 1) => x.toFixed(d).replace('.', ',');
 
 type Tone = 'ok' | 'warn' | 'bad';
@@ -281,6 +289,16 @@ function passportRows(b: Batch, profile: BatchProfile, ref?: Batch | null): Pass
     tone: b.va > 0.8 ? 'bad' : b.va > 0.6 ? 'warn' : 'ok',
     norm: '< 0,6 г/л',
   });
+  if (b.pressure != null) {
+    rows.push({
+      key: 'pressure',
+      label: 'Давление CO₂',
+      value: `${fmt(b.pressure)} бар`,
+      delta: d('pressure', 1),
+      tone: b.pressure > 7 ? 'bad' : b.pressure > 6.5 ? 'warn' : undefined,
+      norm: 'игристое ~5–6 бар, петнат ~2,5–4',
+    });
+  }
   rows.push({
     key: 'temp',
     label: 'Температура',
@@ -340,14 +358,29 @@ function ScenarioPicker({
   onOpenReference,
   vintageChoice,
   onVintage,
+  scaleId,
+  onScale,
 }: {
   onPick: (s: SimScenario) => void;
   best: Record<string, number>;
   onOpenReference: () => void;
   vintageChoice: VintageChoice;
   onVintage: (v: VintageChoice) => void;
+  scaleId: ScaleId;
+  onScale: (s: ScaleId) => void;
 }) {
   const selected = VINTAGE_OPTIONS.find((v) => v.id === vintageChoice)!;
+  const scale = SCALES.find((s) => s.id === scaleId)!;
+  const groups: { id: 'cycle' | 'crisis'; title: string; lead: string }[] = [
+    { id: 'cycle', title: 'Полный цикл', lead: 'От срока сбора до розлива: год урожая сдвигает исходное сусло.' },
+    { id: 'crisis', title: 'Аварийные ситуации', lead: 'Вино уже в беде. Задача — поставить диагноз по паспорту и вытащить партию с наименьшими потерями.' },
+  ];
+  const pill = (on: boolean) =>
+    `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+      on
+        ? 'bg-emerald-700 border-emerald-700 text-white'
+        : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-emerald-400'
+    }`;
   return (
     <div>
       <div className="mb-5 rounded-2xl border border-stone-200 dark:border-stone-800 p-4">
@@ -373,46 +406,68 @@ function ScenarioPicker({
         <p className="text-xs text-stone-500 dark:text-stone-400 mt-2">
           {selected.description} Год сдвигает исходные сахар, pH, кислотность и азот — а от них зависят дозы и риски.
         </p>
+
+        <div className="flex flex-wrap items-center gap-2 mt-4">
+          <span className="text-sm font-medium text-stone-800 dark:text-stone-200 mr-1">Масштаб партии</span>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Масштаб партии">
+            {SCALES.map((s) => (
+              <button key={s.id} type="button" onClick={() => onScale(s.id)} aria-pressed={scaleId === s.id} className={pill(scaleId === s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-stone-500 dark:text-stone-400 mt-2">{scale.hint}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {allScenarios.map((s) => {
-          const doses = s.stages.filter((st) => st.dose).length;
-          return (
-            <button
-              key={s.id}
-              onClick={() => onPick(s)}
-              className="text-left rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg transition-all group"
-            >
-              <div className="bg-gradient-to-br from-emerald-900 via-teal-800 to-emerald-950 text-white p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-4xl">{s.icon}</span>
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 backdrop-blur">{s.difficulty}</span>
-                </div>
-                <h3 className="text-xl font-bold">{s.title}</h3>
-                <p className="text-sm text-white/80">{s.grape}</p>
-              </div>
-              <div className="p-5">
-                <p className="text-sm text-stone-600 dark:text-stone-400 mb-3">{s.intro}</p>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-stone-400">
-                    {s.stages.length} {plural(s.stages.length, ['этап', 'этапа', 'этапов'])}
-                    {doses > 0 && <> · {doses} с расчётом дозы</>}
-                  </span>
-                  {best[s.id] != null && (
-                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      Лучший: {best[s.id]} / 100
+      {groups.map((g) => {
+        const list = allScenarios.filter((s) => (s.group ?? 'cycle') === g.id);
+        if (!list.length) return null;
+        return (
+          <section key={g.id} className="mb-8" aria-labelledby={`sim-group-${g.id}`}>
+            <h2 id={`sim-group-${g.id}`} className="text-lg font-bold text-stone-900 dark:text-stone-100">{g.title}</h2>
+            <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">{g.lead}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {list.map((s) => {
+              const doses = s.stages.filter((st) => st.dose).length;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => onPick(s)}
+                  className="text-left rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg transition-all group"
+                >
+                  <div className="bg-gradient-to-br from-emerald-900 via-teal-800 to-emerald-950 text-white p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-4xl">{s.icon}</span>
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 backdrop-blur">{s.difficulty}</span>
+                    </div>
+                    <h3 className="text-xl font-bold">{s.title}</h3>
+                    <p className="text-sm text-white/80">{s.grape}</p>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-sm text-stone-600 dark:text-stone-400 mb-3">{s.intro}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-stone-400">
+                        {s.stages.length} {plural(s.stages.length, ['этап', 'этапа', 'этапов'])}
+                        {doses > 0 && <> · {doses} с расчётом дозы</>}
+                      </span>
+                      {best[s.id] != null && (
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          Лучший: {best[s.id]} / 100
+                        </span>
+                      )}
+                    </div>
+                    <span className="mt-3 inline-block text-sm font-semibold text-emerald-700 dark:text-emerald-400 group-hover:underline">
+                      Начать сценарий →
                     </span>
-                  )}
-                </div>
-                <span className="mt-3 inline-block text-sm font-semibold text-emerald-700 dark:text-emerald-400 group-hover:underline">
-                  Начать сценарий →
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          </section>
+        );
+      })}
 
       {HAS_REFERENCE && (
       <div className="mt-6 rounded-xl border border-stone-200 dark:border-stone-800 p-4 flex flex-wrap items-center justify-between gap-3">
@@ -552,6 +607,7 @@ export default function WineSimulator() {
   /** null — диалог закрыт; { id: null } — общий справочник; { id } — карточка препарата. */
   const [reagentDialog, setReagentDialog] = useState<{ id: string | null } | null>(null);
   const [vintageChoice, setVintageChoice] = useState<VintageChoice>('random');
+  const [scaleId, setScaleId] = useState<ScaleId>('small');
   const [vintage, setVintage] = useState<Vintage | null>(null);
   /** Партия сейчас и на входе в этап: из второй берутся тексты этапа и сдвиги в паспорте */
   const [batch, setBatch] = useState<Batch | null>(null);
@@ -587,11 +643,13 @@ export default function WineSimulator() {
   }, [scenario, stageIndex, done]);
 
   function start(s: SimScenario) {
-    const v = s.batch ? pickVintage(vintageChoice) : null;
-    const b = s.batch && v ? applyVintage(s.batch, v) : null;
+    // Аварийные сценарии начинают с заданной партии: год урожая уже ничего не решает
+    const v = s.batch && !s.fixedBatch ? pickVintage(vintageChoice) : null;
+    let b = s.batch ? (v ? applyVintage(s.batch, v) : { ...s.batch }) : null;
+    if (b && !s.fixedVolume) b = { ...b, volumeL: SCALES.find((x) => x.id === scaleId)!.volumeL };
     setScenario(s);
     setStageIndex(0);
-    setMetrics({ ...INITIAL_METRICS });
+    setMetrics({ ...INITIAL_METRICS, ...s.initialMetrics });
     setFaults([]);
     setLog([]);
     setChosen(null);
@@ -699,6 +757,8 @@ export default function WineSimulator() {
           onOpenReference={() => setReagentDialog({ id: null })}
           vintageChoice={vintageChoice}
           onVintage={setVintageChoice}
+          scaleId={scaleId}
+          onScale={setScaleId}
         />
         {reagentDialog && (
           <ReagentDialog

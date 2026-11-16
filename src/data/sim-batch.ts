@@ -32,6 +32,10 @@ export interface Batch {
   phase: 'must' | 'wine';
   /** Спиртоустойчивость выбранного штамма, % об. Без указания — 15 */
   tolerance?: number;
+  /** Давление CO₂ в бутылке, бар (игристые) */
+  pressure?: number;
+  /** Азот к моменту брожения: питание могло прийти тем же решением, что и старт */
+  fermentYan?: number;
 }
 
 /** Постоянные свойства партии сценария. */
@@ -47,6 +51,8 @@ export interface BatchProfile {
   so2Limit: number;
   /** Целевой молекулярный SO₂ для стиля, мг/л: белые и розе ~0,8, красные ~0,5 */
   molTarget: number;
+  /** Игристые: давление, ниже которого вино не тянет на свою категорию, бар */
+  minPressure?: number;
 }
 
 export type BatchOp =
@@ -56,6 +62,8 @@ export type BatchOp =
   | { so2: number; bound?: number }
   /** Сбраживание: сахар → спирт. residual — остаток при идеальных условиях. */
   | { ferment: { residual?: number } }
+  /** Вторичное брожение в закрытой бутылке: сахар → спирт и давление CO₂ */
+  | { referment: { residual?: number } }
   /** Яблочно-молочное брожение */
   | { mlf: 'complete' | 'partial' }
   /** Потери свободного SO₂ на кислород (переливка, розлив) */
@@ -108,6 +116,9 @@ const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
 /** Порог потенциального спирта, выше которого штамм без специальной устойчивости сдаётся */
 const DEFAULT_TOLERANCE = 15;
 
+/** Сахар на 1 бар давления CO₂ при вторичном брожении в бутылке, г/л (ориентир) */
+export const SUGAR_PER_BAR = 4;
+
 function normalize(b: Batch): Batch {
   return {
     ...b,
@@ -122,6 +133,7 @@ function normalize(b: Batch): Batch {
     temp: round(b.temp, 0),
     va: Math.max(0, round(b.va, 2)),
     volumeL: Math.round(b.volumeL),
+    ...(b.pressure != null ? { pressure: Math.max(0, round(b.pressure, 1)) } : {}),
   };
 }
 
@@ -159,7 +171,8 @@ export function residualAfterFermentation(b: Batch, profile: BatchProfile, ideal
   } else if (b.yan < 130) {
     residual += 2;
   }
-  const potential = potentialAlcohol(b.sugar, profile.gPerPct);
+  // Дрожжам мешает весь спирт: уже набранный и тот, что даст оставшийся сахар
+  const potential = b.alcohol + potentialAlcohol(b.sugar, profile.gPerPct);
   const tolerance = b.tolerance ?? DEFAULT_TOLERANCE;
   if (potential > tolerance) {
     residual += (potential - tolerance) * profile.gPerPct * 0.35;
@@ -180,6 +193,7 @@ export function applyOps(b0: Batch, ops: BatchOp[] | undefined, profile: BatchPr
       b.totalSO2 += op.so2;
     } else if ('ferment' in op) {
       if (b.phase === 'wine') continue;
+      b.fermentYan = b.yan;
       const { residual } = residualAfterFermentation(b, profile, op.ferment.residual);
       b.alcohol += potentialAlcohol(b.sugar - residual, profile.gPerPct);
       b.sugar = residual;
@@ -189,6 +203,21 @@ export function applyOps(b0: Batch, ops: BatchOp[] | undefined, profile: BatchPr
       // Брожение связывает SO₂ ацетальдегидом: свободного почти не остаётся
       b.freeSO2 *= 0.3;
       b.phase = 'wine';
+    } else if ('referment' in op) {
+      // В бутылке другие условия, чем в чане: азот приходит с тиражным ликёром,
+      // а 11–13 °C — нормальная температура вторичного брожения. Встаёт оно ниже ~10 °C.
+      let residual = op.referment.residual ?? 1;
+      if (b.temp < 10) residual += 12;
+      const potential = b.alcohol + potentialAlcohol(b.sugar, profile.gPerPct);
+      const tolerance = b.tolerance ?? DEFAULT_TOLERANCE;
+      if (potential > tolerance) residual += (potential - tolerance) * profile.gPerPct * 0.35;
+      residual = Math.min(residual, b.sugar);
+      const eaten = Math.max(0, b.sugar - residual);
+      b.alcohol += potentialAlcohol(eaten, profile.gPerPct);
+      b.sugar = residual;
+      // Ориентир практики: ~4 г/л сброженного сахара дают ~1 бар давления
+      b.pressure = (b.pressure ?? 0) + eaten / SUGAR_PER_BAR;
+      b.freeSO2 *= 0.8;
     } else if ('mlf' in op) {
       const share = op.mlf === 'complete' ? 0.95 : 0.5;
       const converted = b.malic * share;
@@ -248,12 +277,12 @@ const RULES: Rule[] = [
     id: 'h2s',
     keyword: 'Сероводород',
     check: (p, n) =>
-      p.phase === 'must' && n.phase === 'wine' && p.yan < 140
+      p.phase === 'must' && n.phase === 'wine' && (n.fermentYan ?? p.yan) < 140
         ? {
             id: 'h2s',
-            fault: `Сероводород: брожение на дефиците азота (YAN ${p.yan} мг/л)`,
+            fault: `Сероводород: брожение на дефиците азота (YAN ${n.fermentYan ?? p.yan} мг/л)`,
             effects: [{ metric: 'purity', delta: -6 }, { metric: 'aroma', delta: -2 }],
-            explain: `Паспорт: к брожению в сусле было ${p.yan} мг/л усвояемого азота при ориентире от ~140. Дрожжи без азота восстанавливают серу до сероводорода.`,
+            explain: `Паспорт: к брожению в сусле было ${n.fermentYan ?? p.yan} мг/л усвояемого азота при ориентире от ~140. Дрожжи без азота восстанавливают серу до сероводорода.`,
           }
         : null,
   },
@@ -262,7 +291,8 @@ const RULES: Rule[] = [
     keyword: 'брожени',
     check: (p, n, profile) => {
       if (!(p.phase === 'must' && n.phase === 'wine' && profile.dry && n.sugar > 4)) return null;
-      const { reasons } = residualAfterFermentation(p, profile);
+      // Причины считаем по условиям, в которых брожение реально шло
+      const { reasons } = residualAfterFermentation({ ...p, temp: n.temp, yan: n.fermentYan ?? p.yan }, profile);
       return {
         id: 'stuck',
         fault: `Брожение не добродило: остаток ${fmt(n.sugar)} г/л`,
@@ -326,6 +356,32 @@ const RULES: Rule[] = [
         : null,
   },
   {
+    id: 'pressure',
+    keyword: 'давлени',
+    check: (p, n) =>
+      (n.pressure ?? 0) > 7 && (p.pressure ?? 0) <= 7
+        ? {
+            id: 'pressure',
+            fault: `Избыточное давление в бутылке: ${fmt(n.pressure ?? 0)} бар`,
+            effects: [{ metric: 'stability', delta: -8 }, { metric: 'purity', delta: -2 }],
+            explain: `Паспорт: в бутылке ${fmt(n.pressure ?? 0)} бар. Выше ~6–7 бар растёт риск фонтанирования при открывании и разрыва бутылок на складе — тиражного сахара было слишком много.`,
+          }
+        : null,
+  },
+  {
+    id: 'flat',
+    keyword: 'газа',
+    check: (_p, n, profile, audit) =>
+      audit && profile.minPressure != null && (n.pressure ?? 0) < profile.minPressure
+        ? {
+            id: 'flat',
+            fault: `Мало газа: ${fmt(n.pressure ?? 0)} бар`,
+            effects: [{ metric: 'structure', delta: -10 }, { metric: 'freshness', delta: -4 }],
+            explain: `Паспорт: в бутылке ${fmt(n.pressure ?? 0)} бар при ориентире от ${fmt(profile.minPressure)} бар. Вино почти не играет — это уже не тот стиль, ради которого его делали.`,
+          }
+        : null,
+  },
+  {
     id: 'residual-bottle',
     keyword: 'сахар',
     check: (_p, n, profile, audit) =>
@@ -375,6 +431,7 @@ export function fillBatch(text: string, b: Batch, gPerPct?: number): string {
     temp: String(b.temp),
     va: fmt(b.va, 2),
     volume: String(b.volumeL),
+    pressure: fmt(b.pressure ?? 0),
   };
   return text.replace(/\{(\w+)\}/g, (m, k) => map[k] ?? m);
 }

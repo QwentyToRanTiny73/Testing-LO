@@ -8,7 +8,9 @@ import {
   molecularFraction,
   so2ReagentGrams,
   so2FromReagent,
+  tartaricGrams,
   KMS_SO2_FRACTION,
+  EU_ACID_LIMIT,
 } from '../lib/enology';
 
 // ───────────────────────────── Этапы с расчётом дозы SO₂ ─────────────────────────────
@@ -16,13 +18,20 @@ import {
 export const comma = (x: number, d = 1) => x.toFixed(d).replace('.', ',');
 
 /** Как реальная навеска соотносится с расчётной — вердикт для разбора. */
-export function doseVerdict(expected: number, entered: number, under: string, over: string, absTol = 0): string {
+export function doseVerdict(
+  expected: number,
+  entered: number,
+  under: string,
+  over: string,
+  absTol = 0,
+  ok = 'В пределах точности. После внесения перемерьте свободный SO₂ через 3–5 суток: часть сразу свяжется.'
+): string {
   const target = Math.max(expected, 0);
   const diff = entered - target;
   if (Math.abs(diff) <= Math.max(0.1 * target, absTol)) {
     return target <= absTol && entered <= absTol
       ? 'Верно: добавка меньше погрешности анализа — вносить нечего, перемерить через неделю.'
-      : 'В пределах точности. После внесения перемерьте свободный SO₂ через 3–5 суток: часть сразу свяжется.';
+      : ok;
   }
   return diff < 0 ? under : over;
 }
@@ -102,5 +111,78 @@ export function so2BottlingStage(opts: {
     question: 'Сколько метабисульфита калия внести?',
     choices: [],
     dose: so2MolecularDose(opts.target, opts.extraFormula),
+  };
+}
+
+// ───────────────────────────── Подкисление сусла ─────────────────────────────
+
+/** Практическое правило: 1 г/л винной кислоты снижает pH примерно на 0,1.
+ *  Буферность конкретного сусла сдвигает цифру, поэтому pH после внесения перемеряют. */
+const TARTARIC_PER_01_PH = 1;
+
+/** Этап «подкислить сусло до целевого pH», с пределом ЕС для сусла. */
+export function acidifyMustStage(opts: { phase: string; targetPH: number; note: string }): SimStage {
+  const limit = EU_ACID_LIMIT.acidifyMust;
+  const wanted = (b: Batch) => Math.max(0, (b.pH - opts.targetPH) * 10 * TARTARIC_PER_01_PH);
+  const perLitre = (b: Batch) => Math.min(wanted(b), limit);
+  // Погрешность pH-метра ~0,02 — это ~0,2 г/л кислоты
+  const tolerance = (b: Batch) => 0.2 * b.volumeL;
+  return {
+    id: 'acid-dose',
+    phase: opts.phase,
+    icon: '🧪',
+    title: 'Коррекция кислотности сусла: расчёт навески',
+    context: `${opts.note} Объём партии — {volume} л.`,
+    data: [
+      { label: 'pH', value: '{pH}' },
+      { label: 'ТК', value: '{ta} г/л' },
+      { label: 'Цель', value: `pH ≈ ${comma(opts.targetPH, 2)}` },
+      { label: 'Объём', value: '{volume} л' },
+    ],
+    question: 'Сколько винной кислоты внести?',
+    choices: [],
+    reagents: ['tartaric'],
+    dose: {
+      prompt: 'Навеска винной кислоты на {volume} л (0 — если подкислять не нужно)',
+      unit: 'г',
+      formula:
+        'Ориентир: 1 г/л винной кислоты снижает pH примерно на 0,1.\n' +
+        `Нужно, г/л = (pH − ${comma(opts.targetPH, 2)}) × 10, но не больше ${comma(limit)} г/л — предел ЕС для сусла.\n` +
+        'Навеска (г) = г/л × объём (л).',
+      expected: (b) => tartaricGrams(b.volumeL, perLitre(b)),
+      apply: (b, grams) => {
+        const gl = grams / b.volumeL;
+        return [{ add: { ta: gl, pH: (-0.1 * gl) / TARTARIC_PER_01_PH } }];
+      },
+      absTolerance: tolerance,
+      explain: (b, exp, grams) => {
+        const w = wanted(b);
+        const calc =
+          w <= 0
+            ? `pH ${comma(b.pH, 2)} уже не выше цели ${comma(opts.targetPH, 2)} — подкислять не нужно.`
+            : w > limit
+              ? `До цели не хватает ${comma((b.pH - opts.targetPH), 2)} pH, это ${comma(w)} г/л — больше предела ${comma(limit)} г/л для сусла. Вносим предел: ${comma(limit)} × ${b.volumeL} = ${comma(exp, 0)} г; остальное решают более ранним сбором или купажом.`
+              : `До цели не хватает ${comma((b.pH - opts.targetPH), 2)} pH, это ${comma(w)} г/л. Навеска: ${comma(w)} × ${b.volumeL} = ${comma(exp, 0)} г.`;
+        const fact = grams > 0 ? ` Внесено ${comma(grams, 0)} г — это ${comma(grams / b.volumeL)} г/л.` : '';
+        return (
+          `${calc}${fact}\n` +
+          doseVerdict(
+            exp,
+            grams,
+            'Недобор: pH останется высоким — сернистая будет работать слабее, а после ЯМБ pH вырастет ещё.',
+            'Перебор: вино выйдет резким, а доза может выйти за допустимый предел подкисления.',
+            tolerance(b),
+            'В пределах точности. После внесения перемерьте pH: буферность сусла сдвигает расчёт.'
+          )
+        );
+      },
+      effects: {
+        exact: [{ metric: 'freshness', delta: 3 }, { metric: 'stability', delta: 3 }],
+        close: [{ metric: 'stability', delta: 1 }],
+        off: [{ metric: 'freshness', delta: -2 }, { metric: 'stability', delta: -2 }],
+      },
+      faults: { off: 'Подкисление сусла не по расчёту' },
+      reagents: ['tartaric'],
+    },
   };
 }

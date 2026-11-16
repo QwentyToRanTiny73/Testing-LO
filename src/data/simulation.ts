@@ -5,8 +5,9 @@
 
 import type { Batch, BatchOp, BatchProfile } from './sim-batch';
 import { so2ReagentGrams, so2FromReagent, type Accuracy } from '../lib/enology';
-import { comma, doseVerdict, so2BottlingStage } from './sim-stages';
+import { comma, doseVerdict, so2BottlingStage, acidifyMustStage } from './sim-stages';
 import { privateScenarios } from 'sim-private';
+import { extraCycleScenarios, crisisScenarios } from './sim-scenarios-extra';
 
 export type MetricKey = 'aroma' | 'freshness' | 'structure' | 'stability' | 'purity';
 
@@ -120,6 +121,14 @@ export interface SimScenario {
   intro: string;
   goal: string;
   stages: SimStage[];
+  /** Раздел на экране выбора: полный цикл (по умолчанию) или разбор аварии */
+  group?: 'cycle' | 'crisis';
+  /** Партия задана как есть: без поправки на год урожая (аварийные сценарии) */
+  fixedBatch?: boolean;
+  /** Объём задан сценарием и не меняется выбором масштаба */
+  fixedVolume?: boolean;
+  /** Стартовые оценки, если вино входит в сценарий уже с проблемой */
+  initialMetrics?: Partial<Record<MetricKey, number>>;
   /** Свои формулировки заметки вместо общих для noteStyle */
   noteText?: NoteText;
   /** Исходная партия до поправки на год урожая */
@@ -733,6 +742,11 @@ const redAgeworthy: SimScenario = {
         },
       ],
     },
+    acidifyMustStage({
+      phase: 'Приёмка и задача брожения',
+      targetPH: 3.5,
+      note: 'После дробления лаборатория дала pH мезги {pH} и ТК {ta} г/л. Высокий pH — это слабая сернистая и микробиологический риск на всей выдержке, а после мацерации и ЯМБ он ещё вырастет на 0,1–0,2. Ориентир для красного сусла — pH около 3,5; подкислять проще всего сейчас, до брожения.',
+    }),
     {
       id: 'cold-soak',
       phase: 'Мацерация',
@@ -2102,6 +2116,7 @@ const customCrush: SimScenario = {
   // В паспорте — поток ароматного белого: остальные потоки решения затрагивают, но отслеживаем один
   batch: { sugar: 240, alcohol: 0, pH: 3.4, ta: 6, malic: 2, yan: 140, freeSO2: 0, totalSO2: 0, temp: 24, va: 0.05, volumeL: 700, phase: 'must' },
   profile: { label: 'Поток ароматного белого (сухое)', color: 'white', dry: true, gPerPct: 16.8, so2Limit: 200, molTarget: 0.8 },
+  fixedVolume: true,
   stages: [
     {
       id: 'vessel-planning',
@@ -2794,7 +2809,16 @@ const customCrush: SimScenario = {
 };
 
 // Личные сценарии подключаются только в закрытой сборке (SIM_PRIVATE=1), см. README
-export const scenarios: SimScenario[] = [whiteAromatic, roseCabernet, orangeMuscat, redAgeworthy, customCrush, ...privateScenarios];
+export const scenarios: SimScenario[] = [
+  whiteAromatic,
+  roseCabernet,
+  orangeMuscat,
+  redAgeworthy,
+  ...extraCycleScenarios,
+  customCrush,
+  ...crisisScenarios,
+  ...privateScenarios,
+];
 
 export function getScenarioById(id: string): SimScenario | undefined {
   return scenarios.find((s) => s.id === id);
